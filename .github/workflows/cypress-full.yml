@@ -1,4 +1,4 @@
-name: Cypress Demo - Full Test
+name: Cypress Demo CI
 
 on:
   push:
@@ -44,39 +44,49 @@ jobs:
             cypress/screenshots
             cypress/videos
 
+      # --- FETCH gh-pages branch ---
+      - name: Fetch GitHub Pages branch
+        run: |
+          # If gh-pages exists, check it out; otherwise create it
+          if git show-ref --verify --quiet refs/heads/gh-pages; then
+            git checkout gh-pages
+          else
+            git checkout --orphan gh-pages
+          fi
+
       - name: Prepare GitHub Pages content
         run: |
           set -e
 
-          REPORT_PATH="reports/${GITHUB_SHA}"
+          REPORT_PATH="reports/${GITHUB_SHA}-$(date +%s)" # unique per run
           TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
-          mkdir -p "gh-pages/$REPORT_PATH"
-          cp -r mochawesome-report/html/* "gh-pages/$REPORT_PATH"
+          mkdir -p "$REPORT_PATH"
+          cp -r mochawesome-report/html/* "$REPORT_PATH"
 
-          HISTORY_FILE="gh-pages/history.json"
+          HISTORY_FILE="history.json"
           if [ -f "$HISTORY_FILE" ]; then
             HISTORY="$(cat "$HISTORY_FILE")"
           else
             HISTORY="[]"
           fi
 
-          # Append a unique entry for each run (timestamp ensures uniqueness)
-          UPDATED_HISTORY="$(echo "$HISTORY" | jq \
+          # Append a new unique entry for this run
+          UPDATED_HISTORY=$(echo "$HISTORY" | jq \
             --arg id "$TIMESTAMP" \
             --arg sha "${GITHUB_SHA}" \
             --arg url "$REPORT_PATH/" \
             --arg ts "$TIMESTAMP" \
-            '. += [{"id":$id,"sha":$sha,"url":$url,"timestamp":$ts}] | sort_by(.timestamp) | reverse | .[:10]')"
+            '. += [{"id":$id,"sha":$sha,"url":$url,"timestamp":$ts}] | sort_by(.timestamp) | reverse | .[:10]')
 
           echo "$UPDATED_HISTORY" > "$HISTORY_FILE"
 
-          # Generate history.html with relative links
-          cat > gh-pages/history.html <<EOF
+          # Generate history.html
+          cat > history.html <<EOF
           <!DOCTYPE html>
           <html>
           <head>
-            <meta charset="UTF-8" />
+            <meta charset="UTF-8">
             <title>Cypress Test History</title>
             <style>
               body { font-family: system-ui; background: #0f172a; color: #e5e7eb; padding: 2rem; }
@@ -92,23 +102,24 @@ jobs:
           
                     echo "$UPDATED_HISTORY" | jq -r \
                       '.[] | "<li><a href=\"\(.url)index.html\">\(.sha)</a><span>\(.timestamp)</span></li>"' \
-                      >> gh-pages/history.html
+                      >> history.html
           
-                    cat >> gh-pages/history.html <<EOF
+                    cat >> history.html <<EOF
             </ul>
           </body>
           </html>
           EOF
 
-          # Redirect root to history page
-          echo '<meta http-equiv="refresh" content="0; url=history.html">' > gh-pages/index.html
+          # Redirect root to history.html
+          echo '<meta http-equiv="refresh" content="0; url=history.html">' > index.html
 
       - name: Deploy GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: gh-pages
-          force_orphan: true
+          publish_dir: .
+          user_name: "github-actions[bot]"
+          user_email: "github-actions[bot]@users.noreply.github.com"
 
       - name: Comment PR with report link
         if: github.event_name == 'pull_request'
