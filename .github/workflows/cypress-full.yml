@@ -47,7 +47,8 @@ jobs:
       - name: Prepare GitHub Pages content
         run: |
           set -e
-          REPORT_PATH="reports/${{ github.sha }}"
+
+          REPORT_PATH="reports/${GITHUB_SHA}"  # relative path
           TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
           mkdir -p "gh-pages/$REPORT_PATH"
@@ -61,14 +62,14 @@ jobs:
           fi
 
           UPDATED_HISTORY="$(echo "$HISTORY" | jq \
-            --arg sha "${{ github.sha }}" \
-            --arg url "/$REPORT_PATH/" \
+            --arg sha "${GITHUB_SHA}" \
+            --arg url "$REPORT_PATH/" \
             --arg ts "$TIMESTAMP" \
             '. += [{"sha":$sha,"url":$url,"timestamp":$ts}] | sort_by(.timestamp) | reverse | .[:10]')"
 
           echo "$UPDATED_HISTORY" > "$HISTORY_FILE"
 
-          # Generate history page with working links
+          # Generate history.html with relative links
           cat > gh-pages/history.html <<EOF
           <!DOCTYPE html>
           <html>
@@ -97,7 +98,7 @@ jobs:
           </html>
           EOF
 
-          # Redirect root to history page
+          # Redirect root to history.html
           echo '<meta http-equiv="refresh" content="0; url=history.html">' > gh-pages/index.html
 
       - name: Deploy GitHub Pages
