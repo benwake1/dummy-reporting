@@ -76,55 +76,53 @@ jobs:
 
           echo "$UPDATED_HISTORY" > gh-pages/history.json
 
-          mkdir -p gh-pages
-
-          cat > gh-pages/history.html <<EOF
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8" />
-<title>Cypress Test History</title>
-<style>
-body {
-  font-family: system-ui;
-  background: #0f172a;
-  color: #e5e7eb;
-  padding: 2rem;
-}
-li {
-  background: #020617;
-  margin-bottom: 0.75rem;
-  padding: 1rem;
-  border-radius: 8px;
-  display: flex;
-  justify-content: space-between;
-}
-a {
-  color: #38bdf8;
-  font-weight: 600;
-  text-decoration: none;
-}
-span {
-  opacity: 0.7;
-}
-</style>
-</head>
-<body>
-<h1>🧪 Cypress Test Report History</h1>
-<ul>
-EOF
+          cat > gh-pages/history.html <<'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8" />
+            <title>Cypress Test History</title>
+            <style>
+              body {
+                font-family: system-ui;
+                background: #0f172a;
+                color: #e5e7eb;
+                padding: 2rem;
+              }
+              li {
+                background: #020617;
+                margin-bottom: 0.75rem;
+                padding: 1rem;
+                border-radius: 8px;
+                display: flex;
+                justify-content: space-between;
+              }
+              a {
+                color: #38bdf8;
+                font-weight: 600;
+                text-decoration: none;
+              }
+              span {
+                opacity: 0.7;
+              }
+            </style>
+          </head>
+          <body>
+            <h1>🧪 Cypress Test Report History</h1>
+            <ul>
+          EOF
 
           echo "$UPDATED_HISTORY" | jq -r \
             '.[] | "<li><a href=\"\(.url)\">\(.sha)</a><span>\(.timestamp)</span></li>"' \
             >> gh-pages/history.html
 
-          cat >> gh-pages/history.html <<EOF
-</ul>
-</body>
-</html>
-EOF
+          cat >> gh-pages/history.html <<'EOF'
+            </ul>
+          </body>
+          </html>
+          EOF
 
-          echo "<meta http-equiv=\"refresh\" content=\"0; url=history.html\">" \
+          echo '<meta http-equiv="refresh" content="0; url=history.html">' \
             > gh-pages/index.html
 
       - name: Deploy GitHub Pages
