@@ -2,7 +2,7 @@ name: Cypress Demo CI
 
 on:
   push:
-    branches: ["main"]
+    branches: [ "main" ]
   pull_request:
   workflow_dispatch:
 
@@ -15,33 +15,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - name: Install dependencies
-        run: npm ci
+      - run: npm ci
 
-      - name: Run Cypress tests
-        run: npm run test:ci
+      - run: npm run test:ci
 
-      - name: Merge Mochawesome reports
-        run: |
-          npx mochawesome-merge mochawesome-report/*.json \
-            > mochawesome-report/merged.json
+      - run: |
+          npx mochawesome-merge mochawesome-report/*.json > mochawesome-report/merged.json
 
-      - name: Generate HTML report
-        run: |
-          npx marge mochawesome-report/merged.json \
-            --reportDir mochawesome-report/html \
-            --reportFilename index
+      - run: |
+          npx marge mochawesome-report/merged.json                 --reportDir mochawesome-report/html                 --reportFilename index
 
-      - name: Upload test artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: mochawesome-${{ github.sha }}
           path: |
@@ -51,34 +41,27 @@ jobs:
 
       - name: Prepare GitHub Pages content
         run: |
-          set -e
+          REPORT_PATH=reports/${{ github.sha }}
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-          REPORT_PATH="reports/${{ github.sha }}"
-          TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-
-          mkdir -p "gh-pages/$REPORT_PATH"
-          cp -r mochawesome-report/html/* "gh-pages/$REPORT_PATH"
+          mkdir -p gh-pages/$REPORT_PATH
+          cp -r mochawesome-report/html/* gh-pages/$REPORT_PATH
 
           if [ -f gh-pages/history.json ]; then
-            HISTORY="$(cat gh-pages/history.json)"
+            HISTORY=$(cat gh-pages/history.json)
           else
             HISTORY="[]"
           fi
 
-          UPDATED_HISTORY="$(echo "$HISTORY" | jq \
-            --arg sha "${{ github.sha }}" \
-            --arg url "/$REPORT_PATH/" \
-            --arg ts "$TIMESTAMP" \
-            '. += [{"sha":$sha,"url":$url,"timestamp":$ts}]
+          UPDATED_HISTORY=$(echo "$HISTORY" | jq                 --arg sha "${{ github.sha }}"                 --arg url "/$REPORT_PATH/"                 --arg ts "$TIMESTAMP"                 '. += [{"sha":$sha,"url":$url,"timestamp":$ts}]
              | sort_by(.timestamp)
              | reverse
-             | .[:10]')"
+             | .[:10]')
 
           echo "$UPDATED_HISTORY" > gh-pages/history.json
 
-          mkdir -p gh-pages
-
-          cat > gh-pages/history.html <<EOF
+          {
+            cat <<'HTML_HEAD'
 <!DOCTYPE html>
 <html>
 <head>
@@ -112,36 +95,32 @@ span {
 <body>
 <h1>🧪 Cypress Test Report History</h1>
 <ul>
-EOF
+HTML_HEAD
 
-          echo "$UPDATED_HISTORY" | jq -r \
-            '.[] | "<li><a href=\"\(.url)\">\(.sha)</a><span>\(.timestamp)</span></li>"' \
-            >> gh-pages/history.html
+            echo "$UPDATED_HISTORY" | jq -r                   '.[] | "<li><a href=\"\(.url)\">\(.sha)</a><span>\(.timestamp)</span></li>"'
 
-          cat >> gh-pages/history.html <<EOF
+            cat <<'HTML_FOOT'
 </ul>
 </body>
 </html>
-EOF
+HTML_FOOT
+          } > gh-pages/history.html
 
-          echo "<meta http-equiv=\"refresh\" content=\"0; url=history.html\">" \
-            > gh-pages/index.html
+          echo "<meta http-equiv='refresh' content='0; url=history.html'>" > gh-pages/index.html
 
-      - name: Deploy GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: gh-pages
 
-      - name: Comment PR with report link
-        if: github.event_name == 'pull_request'
+      - if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
-            const url = `https://${context.repo.owner}.github.io/${context.repo.repo}/reports/${context.sha}/`;
+            const url = `https://${context.repo.owner}.github.io/${context.repo.repo}/reports/${context.sha}/`
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: `🧪 Cypress Test Report\n\n🔗 ${url}`
-            });
+            })
