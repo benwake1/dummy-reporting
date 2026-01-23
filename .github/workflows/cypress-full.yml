@@ -1,0 +1,121 @@
+name: Cypress Demo CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  test-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Cypress tests
+        run: npm run test:ci
+
+      - name: Merge Mochawesome reports
+        run: npx mochawesome-merge mochawesome-report/*.json > mochawesome-report/merged.json
+
+      - name: Generate HTML report
+        run: npx marge mochawesome-report/merged.json --reportDir mochawesome-report/html --reportFilename index
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mochawesome-${{ github.sha }}
+          path: |
+            mochawesome-report
+            cypress/screenshots
+            cypress/videos
+
+      - name: Prepare GitHub Pages content
+        run: |
+          set -e
+          REPORT_PATH="reports/${{ github.sha }}"
+          TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+          mkdir -p "gh-pages/$REPORT_PATH"
+          cp -r mochawesome-report/html/* "gh-pages/$REPORT_PATH"
+
+          HISTORY_FILE="gh-pages/history.json"
+          if [ -f "$HISTORY_FILE" ]; then
+            HISTORY="$(cat "$HISTORY_FILE")"
+          else
+            HISTORY="[]"
+          fi
+
+          UPDATED_HISTORY="$(echo "$HISTORY" | jq \
+            --arg sha "${{ github.sha }}" \
+            --arg url "/$REPORT_PATH/" \
+            --arg ts "$TIMESTAMP" \
+            '. += [{"sha":$sha,"url":$url,"timestamp":$ts}] | sort_by(.timestamp) | reverse | .[:10]')"
+
+          echo "$UPDATED_HISTORY" > "$HISTORY_FILE"
+
+          # Generate history page with working links
+          cat > gh-pages/history.html <<EOF
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8" />
+            <title>Cypress Test History</title>
+            <style>
+              body { font-family: system-ui; background: #0f172a; color: #e5e7eb; padding: 2rem; }
+              li { background: #020617; margin-bottom: 0.75rem; padding: 1rem; border-radius: 8px; display: flex; justify-content: space-between; }
+              a { color: #38bdf8; font-weight: 600; text-decoration: none; }
+              span { opacity: 0.7; }
+            </style>
+          </head>
+          <body>
+            <h1>🧪 Cypress Test Report History</h1>
+            <ul>
+          EOF
+          
+                    echo "$UPDATED_HISTORY" | jq -r \
+                      '.[] | "<li><a href=\"\(.url)index.html\">\(.sha)</a><span>\(.timestamp)</span></li>"' \
+                      >> gh-pages/history.html
+          
+                    cat >> gh-pages/history.html <<EOF
+            </ul>
+          </body>
+          </html>
+          EOF
+
+          # Redirect root to history page
+          echo '<meta http-equiv="refresh" content="0; url=history.html">' > gh-pages/index.html
+
+      - name: Deploy GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: gh-pages
+          force_orphan: true
+
+      - name: Comment PR with report link
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = `https://${context.repo.owner}.github.io/${context.repo.repo}/history.html`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🧪 Cypress Test Report\n\n🔗 ${url}`
+            });
