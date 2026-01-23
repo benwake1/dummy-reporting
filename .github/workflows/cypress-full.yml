@@ -1,4 +1,4 @@
-name: Cypress Demo CI
+name: Cypress Demo - Full Test
 
 on:
   push:
@@ -48,7 +48,7 @@ jobs:
         run: |
           set -e
 
-          REPORT_PATH="reports/${GITHUB_SHA}"  # relative path
+          REPORT_PATH="reports/${GITHUB_SHA}"
           TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
           mkdir -p "gh-pages/$REPORT_PATH"
@@ -61,11 +61,13 @@ jobs:
             HISTORY="[]"
           fi
 
+          # Append a unique entry for each run (timestamp ensures uniqueness)
           UPDATED_HISTORY="$(echo "$HISTORY" | jq \
+            --arg id "$TIMESTAMP" \
             --arg sha "${GITHUB_SHA}" \
             --arg url "$REPORT_PATH/" \
             --arg ts "$TIMESTAMP" \
-            '. += [{"sha":$sha,"url":$url,"timestamp":$ts}] | sort_by(.timestamp) | reverse | .[:10]')"
+            '. += [{"id":$id,"sha":$sha,"url":$url,"timestamp":$ts}] | sort_by(.timestamp) | reverse | .[:10]')"
 
           echo "$UPDATED_HISTORY" > "$HISTORY_FILE"
 
@@ -98,7 +100,7 @@ jobs:
           </html>
           EOF
 
-          # Redirect root to history.html
+          # Redirect root to history page
           echo '<meta http-equiv="refresh" content="0; url=history.html">' > gh-pages/index.html
 
       - name: Deploy GitHub Pages
