@@ -138,7 +138,7 @@ jobs:
 
           echo "$UPDATED_HISTORY" | jq -r '
             .[] |
-            "<li><a href=\"\(.url)\">\(.sha)\(if has(\"run\") then \" (run \(.run))\" else \"\" end)</a><span>\(.timestamp)</span></li>"
+            "<li><a href=\"\(.url)\">\(.sha)\(if has(\"run\") then " (run \(.run))" else "" end)</a><span>\(.timestamp)</span></li>"
           ' >> gh-pages/history.html
 
           cat >> gh-pages/history.html <<'EOF'
