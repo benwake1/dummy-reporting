@@ -15,28 +15,37 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout main
+      # 1️⃣ Checkout main branch (for template)
+      - name: Checkout main branch
         uses: actions/checkout@v4
+        with:
+          path: main-checkout
+          fetch-depth: 0
 
+      # 2️⃣ Setup Node
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: npm
 
+      # 3️⃣ Install dependencies
       - name: Install deps
         run: npm ci
 
+      # 4️⃣ Run Cypress tests
       - name: Run Cypress
         run: npm run test:ci
 
+      # 5️⃣ Merge Mochawesome JSON
       - name: Merge Mochawesome
         run: npx mochawesome-merge mochawesome-report/*.json > mochawesome-report/merged.json
 
+      # 6️⃣ Generate HTML report
       - name: Generate HTML report
         run: npx marge mochawesome-report/merged.json --reportDir mochawesome-report/html --reportFilename index
 
-      # Checkout gh-pages
+      # 7️⃣ Checkout gh-pages branch
       - name: Checkout gh-pages
         uses: actions/checkout@v4
         with:
@@ -44,10 +53,11 @@ jobs:
           path: gh-pages
           fetch-depth: 0
 
+      # 8️⃣ Install jq
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      # Prepare templated pages
+      # 9️⃣ Prepare templated pages
       - name: Prepare Templated Pages
         run: |
           set -e
@@ -114,7 +124,7 @@ jobs:
 
           echo "$UPDATED" > "$HISTORY_FILE"
 
-          # Generate list items from history
+          # Generate list items
           DASHBOARD_ITEMS=$(jq -r '
             .[] |
             . as $r |
@@ -143,9 +153,10 @@ jobs:
             "</li>"
           ' "$HISTORY_FILE")
 
-          # Inject into template
-          sed "s|<!-- DASHBOARD_ITEMS -->|$DASHBOARD_ITEMS|" .cypress-dashboard/template.html > gh-pages/templated_index.html
+          # Inject into template from main-checkout
+          sed "s|<!-- DASHBOARD_ITEMS -->|$DASHBOARD_ITEMS|" main-checkout/.cypress-dashboard/template.html > gh-pages/templated_index.html
 
+      # 🔟 Deploy Pages
       - name: Deploy Pages (templated)
         uses: peaceiris/actions-gh-pages@v3
         with:
