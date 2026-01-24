@@ -1,5 +1,23 @@
 [
   {
+    "sha": "631d4f8e3aeaf25cad86417991bcafd6ee2c46d6",
+    "run_id": "21318041103",
+    "url": "reports/631d4f8e3aeaf25cad86417991bcafd6ee2c46d6/run-21318041103/",
+    "timestamp": "2026-01-24T16:25:28Z",
+    "human_timestamp": "Jan 24, 2026 16:25 UTC",
+    "branch": "main",
+    "message": "Improve Cypress CI dashboard generation script",
+    "author": "benwake1",
+    "status": {
+      "passes": 1,
+      "failures": 0,
+      "pending": 0,
+      "duration": 91
+    },
+    "failures": [],
+    "screenshots": []
+  },
+  {
     "sha": "e9073e1a5ec37f59159284a5f17c9437ab360121",
     "run_id": "21317832981",
     "url": "reports/e9073e1a5ec37f59159284a5f17c9437ab360121/run-21317832981/",
@@ -90,12 +108,5 @@
     "run_id": "21316550196",
     "url": "/reports/7318b1900814fc688586b290ee33bc48885c4bb8/run-1/",
     "timestamp": "2026-01-24T14:26:41Z"
-  },
-  {
-    "sha": "ce19c2c766734142459d50b1d165d56130324ac4",
-    "run": "1",
-    "run_id": "21316276137",
-    "url": "/reports/ce19c2c766734142459d50b1d165d56130324ac4/run-1/",
-    "timestamp": "2026-01-24T14:05:06Z"
   }
 ]
