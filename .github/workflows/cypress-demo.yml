@@ -160,7 +160,7 @@ jobs:
           "<div class=\"meta\">" +
           $r.message + " — " + $r.author +
           " · " + $r.branch +
-          " · " + (($s.duration / 1000 | floor)|tostring) + "s" +
+          " · " + (if $s.duration then ($s.duration / 1000 | floor | tostring) + "s" else "—" end)
           " · " + $r.human_timestamp +
           "</div>" +
           (if ($r.failures|length) > 0 then
