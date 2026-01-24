@@ -137,7 +137,7 @@ jobs:
             $r.status as $s |
             (if $s.failures > 0 then "fail" else "pass" end) as $cls |
             "<li>" +
-              "<a href=\"https://'"$REPO"'.github.io/" + $r.url + "\">" + $r.sha + " (run " + $r.run_id + ")</a> " +
+              "<a href=\"https://'"$REPO"'.github.io/'"$REPO"'/" + $r.url + "\">" + $r.sha + " (run " + $r.run_id + ")</a> " +
               "<span class=\"" + $cls + "\">" +
                 ($s.passes|tostring) + " ✅ / " + ($s.failures|tostring) + " ❌</span>" +
               "<div class=\"meta\">" +
@@ -153,11 +153,12 @@ jobs:
               else "" end) +
               (if ($r.screenshots|length) > 0 then
                 "<details><summary>🖼️ Screenshots</summary>" +
-                ($r.screenshots | map("<img src=\"https://'"$REPO"'.github.io/" + . + "\">") | join("")) +
+                ($r.screenshots | map("<img src=\"https://'"$REPO"'.github.io/'"$REPO"'/" + . + "\">") | join("")) +
                 "</details>"
               else "" end) +
             "</li>"
           ' "$HISTORY_FILE")
+
 
           # Inject into template from main-checkout
           sed "s|<!-- DASHBOARD_ITEMS -->|$DASHBOARD_ITEMS|" main-checkout/.cypress-dashbord/template.html > gh-pages/templated_index.html
