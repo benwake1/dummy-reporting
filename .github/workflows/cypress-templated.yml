@@ -63,7 +63,7 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      # 🔟 Prepare templated pages
+      # 🔟 Prepare Templated Pages
       - name: Prepare Templated Pages
         run: |
           set -e
@@ -159,8 +159,11 @@ jobs:
             "</li>"
           ' "$HISTORY_FILE")
 
-          # Inject into template from main-checkout
-          sed "s|<!-- DASHBOARD_ITEMS -->|$DASHBOARD_ITEMS|" main-checkout/.cypress-dashbord/template.html > gh-pages/templated_index.html
+          # Export for template injection
+          export DASHBOARD_ITEMS
+
+          # Inject into template safely with envsubst
+          envsubst < main-checkout/.cypress-dashbord/template.html > gh-pages/templated_index.html
 
       # 1️⃣1️⃣ Deploy Pages (templated)
       - name: Deploy Pages (templated)
