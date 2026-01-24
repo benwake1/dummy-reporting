@@ -32,7 +32,7 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      # 4️⃣ Run Cypress
+      # 4️⃣ Run Cypress tests
       - name: Run Cypress
         run: npm run test:ci
 
@@ -56,7 +56,7 @@ jobs:
             mochawesome-report/html
             cypress/screenshots
 
-      # 8️⃣ Checkout gh-pages
+      # 8️⃣ Checkout gh-pages branch
       - name: Checkout gh-pages
         uses: actions/checkout@v4
         with:
@@ -64,8 +64,8 @@ jobs:
           path: gh-pages
           fetch-depth: 0
 
-      # 9️⃣ Checkout main again (template access)
-      - name: Checkout main for template
+      # 9️⃣ Checkout main branch again (template)
+      - name: Checkout main branch for template
         uses: actions/checkout@v4
         with:
           path: main-checkout
@@ -98,9 +98,7 @@ jobs:
           mkdir -p "gh-pages/$REPORT_PATH"
           cp -r mochawesome-report/html/* "gh-pages/$REPORT_PATH"
 
-          # -------------------------------
-          # Artifact metadata (optional)
-          # -------------------------------
+          # Artifact metadata
           ARTIFACT_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}#artifacts"
 
           ARTIFACT_JSON=$(curl -s \
@@ -109,24 +107,10 @@ jobs:
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts")
 
           ARTIFACT_PRESENT=$(echo "$ARTIFACT_JSON" | jq '(.artifacts | length) > 0')
+          ARTIFACT_SIZE_MB=$(echo "$ARTIFACT_JSON" | jq 'if (.artifacts | length) > 0 then (.artifacts[0].size_in_bytes / 1024 / 1024 | floor) else null end')
+          ARTIFACT_EXPIRES=$(echo "$ARTIFACT_JSON" | jq -r 'if (.artifacts | length) > 0 then .artifacts[0].expires_at else null end')
 
-          ARTIFACT_SIZE_MB=$(echo "$ARTIFACT_JSON" | jq '
-            if (.artifacts | length) > 0
-            then (.artifacts[0].size_in_bytes / 1024 / 1024 | floor)
-            else null
-            end
-          ')
-
-          ARTIFACT_EXPIRES=$(echo "$ARTIFACT_JSON" | jq -r '
-            if (.artifacts | length) > 0
-            then .artifacts[0].expires_at
-            else null
-            end
-          ')
-
-          # -------------------------------
           # Test metadata
-          # -------------------------------
           FAILURES=$(jq '[.results[].suites[].tests[]? | select(.fail) | .title]' mochawesome-report/merged.json)
           STATUS=$(jq '.stats | { passes, failures, pending, duration }' mochawesome-report/merged.json)
 
@@ -196,7 +180,7 @@ jobs:
                 "<a class=\"artifact-btn\" href=\"" + $r.artifact.url + "\" target=\"_blank\">📦 Artifacts</a>" +
                 "<div class=\"artifact-meta\">" +
                   "📦 " + ($r.artifact.size_mb|tostring) + " MB" +
-                  " · ⏳ expires " + ($r.artifact.expires_at | sub(\"T.*\"; \"\")) +
+                  " · ⏳ expires " + ($r.artifact.expires_at | split(\"T\")[0]) +
                 "</div>" +
                 "<details><summary>🖼️ Screenshots</summary>" +
                   "<a href=\"" + $r.artifact.url + "\" target=\"_blank\">View screenshots in artifacts</a>" +
@@ -223,7 +207,7 @@ jobs:
 
       # 1️⃣2️⃣ Deploy Pages
       - name: Deploy Pages
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: gh-pages
