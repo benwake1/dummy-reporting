@@ -13,43 +13,44 @@ permissions:
 jobs:
   test-and-publish:
     runs-on: ubuntu-latest
-    steps:
 
-      # 1️⃣ Checkout main branch (ensure template & code exist)
+    steps:
+      # Checkout main branch into main-checkout folder
       - name: Checkout main
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
           path: main-checkout
+          fetch-depth: 0
 
-      # 2️⃣ Setup Node
+      # Setup Node in main-checkout so package-lock.json is detected
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: npm
+          cache: 'npm'
+        working-directory: main-checkout
 
-      # 3️⃣ Install dependencies
-      - name: Install deps
+      # Install dependencies
+      - name: Install dependencies
         run: npm ci
         working-directory: main-checkout
 
-      # 4️⃣ Run Cypress tests
+      # Run Cypress tests
       - name: Run Cypress
         run: npm run test:ci
         working-directory: main-checkout
 
-      # 5️⃣ Merge Mochawesome reports
+      # Merge Mochawesome reports
       - name: Merge Mochawesome
         run: npx mochawesome-merge mochawesome-report/*.json > mochawesome-report/merged.json
         working-directory: main-checkout
 
-      # 6️⃣ Generate HTML report
+      # Generate HTML report
       - name: Generate HTML report
         run: npx marge mochawesome-report/merged.json --reportDir mochawesome-report/html --reportFilename index
         working-directory: main-checkout
 
-      # 7️⃣ Checkout gh-pages branch
+      # Checkout gh-pages branch
       - name: Checkout gh-pages
         uses: actions/checkout@v4
         with:
@@ -57,11 +58,11 @@ jobs:
           path: gh-pages
           fetch-depth: 0
 
-      # 8️⃣ Install jq
+      # Install jq
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      # 9️⃣ Prepare Pages
+      # Prepare Pages with template
       - name: Prepare Pages
         run: |
           set -e
@@ -90,11 +91,10 @@ jobs:
           # Failed tests
           FAILURES=$(jq '[.results[].suites[].tests[]? | select(.fail) | .title]' main-checkout/mochawesome-report/merged.json)
 
-          # Stats
           STATUS=$(jq '.stats | { passes, failures, pending, duration }' main-checkout/mochawesome-report/merged.json)
 
-          MSG=$(git log -1 --pretty=%s)
-          AUTHOR=$(git log -1 --pretty=%an)
+          MSG=$(git -C main-checkout log -1 --pretty=%s)
+          AUTHOR=$(git -C main-checkout log -1 --pretty=%an)
           BRANCH="${GITHUB_REF#refs/heads/}"
 
           HISTORY_FILE="gh-pages/history.json"
@@ -128,40 +128,16 @@ jobs:
 
           echo "$UPDATED" > "$HISTORY_FILE"
 
-          # Build dashboard from template
-          DASHBOARD_ITEMS=$(jq -r '
-            .[] |
-            . as $r |
-            $r.status as $s |
-            (if $s.failures > 0 then "fail" else "pass" end) as $cls |
-            "<li>" +
-              "<a href=\"https://'"$REPO"'.github.io/'"$REPO"'/" + $r.url + "\">" + $r.sha + " (run " + $r.run_id + ")</a> " +
-              "<span class=\"" + $cls + "\">" +
-                ($s.passes|tostring) + " ✅ / " + ($s.failures|tostring) + " ❌</span>" +
-              "<div class=\"meta\">" +
-                $r.message + " — " + $r.author +
-                " · " + $r.branch +
-                " · " + (if $s.duration then ($s.duration / 1000 | floor | tostring) + "s" else "—" end) +
-                " · " + $r.human_timestamp +
-              "</div>" +
-              (if ($r.failures|length) > 0 then
-                "<details><summary>❌ Failed tests</summary><ul>" +
-                ($r.failures | map("<li>" + . + "</li>") | join("")) +
-                "</ul></details>"
-              else "" end) +
-              (if ($r.screenshots|length) > 0 then
-                "<details><summary>🖼️ Screenshots</summary>" +
-                ($r.screenshots | map("<img src=\"https://'"$REPO"'.github.io/'"$REPO"'/" + . + "\">") | join("")) +
-                "</details>"
-              else "" end) +
-            "</li>"
-          ' "$HISTORY_FILE")
+          # Build dashboard using template
+          TEMPLATE="main-checkout/.cypress-dashboard/template.html"
+          [ -f "$TEMPLATE" ] || echo "ERROR: Template not found!" && exit 1
 
-          # Escape & safely inject into template
-          ESCAPED_DASHBOARD_ITEMS=$(printf '%s\n' "$DASHBOARD_ITEMS" | sed 's/[&/\]/\\&/g')
-          sed "s|<!-- DASHBOARD_ITEMS -->|$ESCAPED_DASHBOARD_ITEMS|" main-checkout/.cypress-dashbord/template.html > gh-pages/templated_index.html
+          cp "$TEMPLATE" gh-pages/templated_index.html
 
-      # 10️⃣ Deploy Pages
+          # Replace placeholders
+          sed -i "s|{{HISTORY_JSON}}|$UPDATED|g" gh-pages/templated_index.html
+
+      # Deploy Pages
       - name: Deploy Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
