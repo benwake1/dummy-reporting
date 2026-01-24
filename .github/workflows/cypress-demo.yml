@@ -1,4 +1,4 @@
-name: Cypress Demo - With Pages
+name: Cypress Demo CI
 
 on:
   push:
@@ -32,14 +32,11 @@ jobs:
 
       - name: Merge Mochawesome reports
         run: |
-          npx mochawesome-merge mochawesome-report/*.json \
-            > mochawesome-report/merged.json
+          npx mochawesome-merge mochawesome-report/*.json > mochawesome-report/merged.json
 
       - name: Generate HTML report
         run: |
-          npx marge mochawesome-report/merged.json \
-            --reportDir mochawesome-report/html \
-            --reportFilename index
+          npx marge mochawesome-report/merged.json --reportDir mochawesome-report/html --reportFilename index
 
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
@@ -50,7 +47,7 @@ jobs:
             cypress/screenshots
             cypress/videos
 
-      # 🔑 Checkout gh-pages branch
+      # Checkout gh-pages branch
       - name: Checkout gh-pages branch
         uses: actions/checkout@v4
         with:
@@ -66,7 +63,6 @@ jobs:
         run: |
           set -e
 
-          # Unique report folder per workflow run
           REPORT_PATH="reports/${{ github.sha }}/run-${{ github.run_id }}"
           TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
           HUMAN_TS="$(date -u +"%b %d, %Y %H:%M UTC")"
@@ -74,14 +70,17 @@ jobs:
           mkdir -p "gh-pages/$REPORT_PATH"
           cp -r mochawesome-report/html/* "gh-pages/$REPORT_PATH"
 
-          # Load existing history or initialize
+          # Extract pass/fail/pending counts
+          STATUS="$(jq '.stats | {passes, failures, pending, duration}' mochawesome-report/merged.json)"
+
+          # Load existing history
           if [ -f gh-pages/history.json ]; then
             HISTORY="$(cat gh-pages/history.json)"
           else
             HISTORY="[]"
           fi
 
-          # Append new run and normalize old entries
+          # Append new run, normalize old entries, sort, keep last 10
           UPDATED_HISTORY="$(echo "$HISTORY" | jq \
             --arg sha "${{ github.sha }}" \
             --arg url "reports/$REPORT_PATH/" \
@@ -89,13 +88,15 @@ jobs:
             --arg human_ts "$HUMAN_TS" \
             --arg run_id "${{ github.run_id }}" \
             --arg run_attempt "${{ github.run_attempt }}" \
+            --argjson status "$STATUS" \
             '. += [{
                   "sha": $sha,
                   "run_id": $run_id,
                   "run_attempt": $run_attempt,
                   "url": $url,
                   "timestamp": $ts,
-                  "human_timestamp": $human_ts
+                  "human_timestamp": $human_ts,
+                  "status": $status
                 }]
              | map(if has("id") then del(.id) else . end)
              | sort_by(.timestamp)
@@ -104,7 +105,7 @@ jobs:
 
           echo "$UPDATED_HISTORY" > gh-pages/history.json
 
-          # Generate history.html
+          # Generate HTML dashboard
           cat > gh-pages/history.html <<'EOF'
           <!DOCTYPE html>
           <html>
@@ -113,9 +114,14 @@ jobs:
             <title>Cypress Test History</title>
             <style>
               body { font-family: system-ui; background: #0f172a; color: #e5e7eb; padding: 2rem; }
-              li { background: #020617; margin-bottom: 0.75rem; padding: 1rem; border-radius: 8px; display: flex; justify-content: space-between; }
+              li { background: #020617; margin-bottom: 0.75rem; padding: 1rem; border-radius: 8px; }
               a { color: #38bdf8; font-weight: 600; text-decoration: none; }
-              span { opacity: 0.7; }
+              span { opacity: 0.8; margin-left: 0.5rem; }
+              .pass { color: #22c55e; font-weight: bold; }
+              .fail { color: #ef4444; font-weight: bold; }
+              .pending { color: #fbbf24; font-weight: bold; }
+              details { margin-top: 0.25rem; }
+              summary { cursor: pointer; }
             </style>
           </head>
           <body>
@@ -123,12 +129,16 @@ jobs:
             <ul>
           EOF
 
-          # Render each entry
+          # Group by SHA and render
           echo "$UPDATED_HISTORY" | jq -r '
-            .[] |
-            "<li><a href=\"" + .url + "\">" + .sha +
-            (if has("run_attempt") then " (run " + (.run_attempt|tostring) + ")" else "" end) +
-            "</a><span>" + .human_timestamp + "</span></li>"
+            group_by(.sha)[] |
+            . as $group |
+            $latest = $group[0] |
+            $status = $latest.status |
+            $status_class = if $status.failures > 0 then "fail" elif $status.pending > 0 then "pending" else "pass" end |
+            "<li><a href=\"" + $latest.url + "\">" + $latest.sha + " (latest run)</a> <span class=\"" + $status_class + "\">" + ($status.passes|tostring) + " ✅ / " + ($status.failures|tostring) + " ❌</span>" +
+            (if ($group|length) > 1 then "<details><summary>Reruns</summary><ul>" + ($group[1:] | map("<li><a href=\"" + .url + "\">Run " + .run_id + "</a> <span>Pass: " + (.status.passes|tostring) + " Fail: " + (.status.failures|tostring) + " Pending: " + (.status.pending|tostring) + " — " + .human_timestamp + "</span></li>") | join("") ) + "</ul></details>" else "" end) +
+            "</li>"
           ' >> gh-pages/history.html
 
           cat >> gh-pages/history.html <<'EOF'
