@@ -83,7 +83,7 @@ jobs:
           # Append new run, normalize old entries, sort, keep last 10
           UPDATED_HISTORY="$(echo "$HISTORY" | jq \
             --arg sha "${{ github.sha }}" \
-            --arg url "reports/$REPORT_PATH/" \
+            --arg url "$REPORT_PATH/" \
             --arg ts "$TIMESTAMP" \
             --arg human_ts "$HUMAN_TS" \
             --arg run_id "${{ github.run_id }}" \
