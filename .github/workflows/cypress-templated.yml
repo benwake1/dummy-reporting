@@ -63,7 +63,7 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      # 🔟 Prepare templated pages (safe HTML insertion)
+      # 🔟 Prepare templated pages (fixed UL injection)
       - name: Prepare Templated Pages
         run: |
           set -e
@@ -133,7 +133,7 @@ jobs:
 
           echo "$UPDATED" > "$HISTORY_FILE"
 
-          # Generate dashboard items safely
+          # Generate list items
           DASHBOARD_ITEMS=$(jq -r '
             .[] |
             . as $r |
@@ -162,10 +162,17 @@ jobs:
             "</li>"
           ' "$HISTORY_FILE")
 
-          # Inject dashboard items safely
-          cat main-checkout/.cypress-dashbord/template.html > gh-pages/templated_index.html
-          echo "$DASHBOARD_ITEMS" >> gh-pages/templated_index.html
-
+          # Inject dashboard items into template using awk safely
+          awk -v items="$DASHBOARD_ITEMS" '
+            BEGIN {inside_ul=0}
+            {
+              print
+              if ($0 ~ /<ul>/) { 
+                print items 
+                inside_ul=1
+              }
+            }
+          ' main-checkout/.cypress-dashbord/template.html > gh-pages/templated_index.html
       # 1️⃣1️⃣ Deploy Pages (templated)
       - name: Deploy Pages (templated)
         uses: peaceiris/actions-gh-pages@v3
