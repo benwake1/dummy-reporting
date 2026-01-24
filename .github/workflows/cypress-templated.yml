@@ -129,7 +129,7 @@ jobs:
           echo "$UPDATED" > "$HISTORY_FILE"
 
           # Build dashboard using template
-          TEMPLATE="main-checkout/.cypress-dashboard/template.html"
+          TEMPLATE="main-checkout/.cypress-dashbord/template.html"
           [ -f "$TEMPLATE" ] || echo "ERROR: Template not found!" && exit 1
 
           cp "$TEMPLATE" gh-pages/templated_index.html
