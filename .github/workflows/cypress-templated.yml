@@ -1,0 +1,154 @@
+name: Cypress Demo - Templated Dashboard
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  test-and-publish-templated:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Run Cypress
+        run: npm run test:ci
+
+      - name: Merge Mochawesome
+        run: npx mochawesome-merge mochawesome-report/*.json > mochawesome-report/merged.json
+
+      - name: Generate HTML report
+        run: npx marge mochawesome-report/merged.json --reportDir mochawesome-report/html --reportFilename index
+
+      # Checkout gh-pages
+      - name: Checkout gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+          fetch-depth: 0
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      # Prepare templated pages
+      - name: Prepare Templated Pages
+        run: |
+          set -e
+
+          REPO="${{ github.repository }}"
+          SHA="${{ github.sha }}"
+          RUN_ID="${{ github.run_id }}"
+          REPORT_PATH="reports/$SHA/run-$RUN_ID"
+          PAGE_URL="$REPORT_PATH/"
+
+          TS="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          HUMAN_TS="$(date -u +"%b %d, %Y %H:%M UTC")"
+
+          mkdir -p "gh-pages/$REPORT_PATH"
+          cp -r mochawesome-report/html/* "gh-pages/$REPORT_PATH"
+
+          # Screenshots
+          SCREENSHOTS="[]"
+          if [ -d cypress/screenshots ]; then
+            mkdir -p "gh-pages/$REPORT_PATH/screenshots"
+            cp -r cypress/screenshots/* "gh-pages/$REPORT_PATH/screenshots"
+            SCREENSHOTS=$(find "gh-pages/$REPORT_PATH/screenshots" -type f | sed "s|gh-pages/||" | jq -R . | jq -s .)
+          fi
+
+          # Failed tests
+          FAILURES=$(jq '[.results[].suites[].tests[]? | select(.fail) | .title]' mochawesome-report/merged.json)
+
+          # Status
+          STATUS=$(jq '.stats | { passes, failures, pending, duration }' mochawesome-report/merged.json)
+
+          MSG=$(git log -1 --pretty=%s)
+          AUTHOR=$(git log -1 --pretty=%an)
+          BRANCH="${GITHUB_REF#refs/heads/}"
+
+          # History file
+          HISTORY_FILE="gh-pages/templated_history.json"
+          [ -f "$HISTORY_FILE" ] || echo "[]" > "$HISTORY_FILE"
+
+          UPDATED=$(jq \
+            --arg sha "$SHA" \
+            --arg run_id "$RUN_ID" \
+            --arg url "$PAGE_URL" \
+            --arg ts "$TS" \
+            --arg hts "$HUMAN_TS" \
+            --arg branch "$BRANCH" \
+            --arg msg "$MSG" \
+            --arg author "$AUTHOR" \
+            --argjson status "$STATUS" \
+            --argjson failures "$FAILURES" \
+            --argjson screenshots "$SCREENSHOTS" \
+            '. += [{
+              sha: $sha,
+              run_id: $run_id,
+              url: $url,
+              timestamp: $ts,
+              human_timestamp: $hts,
+              branch: $branch,
+              message: $msg,
+              author: $author,
+              status: $status,
+              failures: $failures,
+              screenshots: $screenshots
+            }] | sort_by(.timestamp) | reverse | .[:10]' "$HISTORY_FILE")
+
+          echo "$UPDATED" > "$HISTORY_FILE"
+
+          # Generate list items from history
+          DASHBOARD_ITEMS=$(jq -r '
+            .[] |
+            . as $r |
+            $r.status as $s |
+            (if $s.failures > 0 then "fail" else "pass" end) as $cls |
+            "<li>" +
+              "<a href=\"https://'"$REPO"'.github.io/" + $r.url + "\">" + $r.sha + " (run " + $r.run_id + ")</a> " +
+              "<span class=\"" + $cls + "\">" +
+                ($s.passes|tostring) + " ✅ / " + ($s.failures|tostring) + " ❌</span>" +
+              "<div class=\"meta\">" +
+                $r.message + " — " + $r.author +
+                " · " + $r.branch +
+                " · " + (if $s.duration then ($s.duration / 1000 | floor | tostring) + "s" else "—" end) +
+                " · " + $r.human_timestamp +
+              "</div>" +
+              (if ($r.failures|length) > 0 then
+                "<details><summary>❌ Failed tests</summary><ul>" +
+                ($r.failures | map("<li>" + . + "</li>") | join("")) +
+                "</ul></details>"
+              else "" end) +
+              (if ($r.screenshots|length) > 0 then
+                "<details><summary>🖼️ Screenshots</summary>" +
+                ($r.screenshots | map("<img src=\"https://'"$REPO"'.github.io/" + . + "\">") | join("")) +
+                "</details>"
+              else "" end) +
+            "</li>"
+          ' "$HISTORY_FILE")
+
+          # Inject into template
+          sed "s|<!-- DASHBOARD_ITEMS -->|$DASHBOARD_ITEMS|" .cypress-dashboard/template.html > gh-pages/templated_index.html
+
+      - name: Deploy Pages (templated)
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: gh-pages
+          keep_files: true
