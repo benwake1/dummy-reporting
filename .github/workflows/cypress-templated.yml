@@ -44,7 +44,7 @@ jobs:
       - name: Generate HTML report
         run: npx marge mochawesome-report/merged.json --reportDir mochawesome-report/html --reportFilename index
 
-      # 7️⃣ Upload artifacts (optional)
+      # 7️⃣ Upload artifacts
       - name: Upload Cypress Artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -98,9 +98,9 @@ jobs:
           mkdir -p "gh-pages/$REPORT_PATH"
           cp -r mochawesome-report/html/* "gh-pages/$REPORT_PATH"
 
+          # -------------------------------
           # Artifact metadata
-          ARTIFACT_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}#artifacts"
-
+          # -------------------------------
           ARTIFACT_JSON=$(curl -s \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github+json" \
@@ -109,8 +109,11 @@ jobs:
           ARTIFACT_PRESENT=$(echo "$ARTIFACT_JSON" | jq '(.artifacts | length) > 0')
           ARTIFACT_SIZE_MB=$(echo "$ARTIFACT_JSON" | jq 'if (.artifacts | length) > 0 then (.artifacts[0].size_in_bytes / 1024 / 1024 | floor) else null end')
           ARTIFACT_EXPIRES=$(echo "$ARTIFACT_JSON" | jq -r 'if (.artifacts | length) > 0 then .artifacts[0].expires_at else null end')
+          ARTIFACT_DOWNLOAD_URL=$(echo "$ARTIFACT_JSON" | jq -r 'if (.artifacts | length) > 0 then .artifacts[0].archive_download_url else null end')
 
+          # -------------------------------
           # Test metadata
+          # -------------------------------
           FAILURES=$(jq '[.results[].suites[].tests[]? | select(.fail) | .title]' mochawesome-report/merged.json)
           STATUS=$(jq '.stats | { passes, failures, pending, duration }' mochawesome-report/merged.json)
 
@@ -130,8 +133,8 @@ jobs:
             --arg branch "$BRANCH" \
             --arg msg "$MSG" \
             --arg author "$AUTHOR" \
-            --arg artifact_url "$ARTIFACT_URL" \
             --argjson artifact_present "$ARTIFACT_PRESENT" \
+            --arg artifact_url "$ARTIFACT_DOWNLOAD_URL" \
             --argjson artifact_size "$ARTIFACT_SIZE_MB" \
             --arg artifact_expires "$ARTIFACT_EXPIRES" \
             --argjson status "$STATUS" \
@@ -157,33 +160,38 @@ jobs:
 
           echo "$UPDATED" > "$HISTORY_FILE"
 
+          # -------------------------------
+          # Render dashboard items
+          # -------------------------------
           DASHBOARD_ITEMS=$(jq -r --arg base_url "$BASE_URL" '
-          .[] |
-          . as $r |
-          $r.status as $s |
-          (if $s.failures > 0 then "fail" else "pass" end) as $cls |
-          "<li>" +
-          "<a href=\"" + $base_url + $r.url + "\">" + $r.sha + " (run " + $r.run_id + ")</a> " +
-          "<span class=\"" + $cls + "\">" + ($s.passes|tostring) + " ✅ / " + ($s.failures|tostring) + " ❌</span>" +
-          "<div class=\"meta\">" + $r.message + " — " + $r.author + " · " + $r.branch + " · " +
-          (if $s.duration then ($s.duration / 1000 | floor | tostring) + "s" else "—" end) +
-          " · " + $r.human_timestamp +
-          "</div>" +
-          (if $r.artifact.present then
-          "<a class=\"artifact-btn\" href=\"" + $r.artifact.url + "\" target=\"_blank\">📦 Artifacts</a>" +
-          "<div class=\"artifact-meta\">📦 " + ($r.artifact.size_mb|tostring) + " MB" +
-          (if $r.artifact.expires_at != null then " · ⏳ expires " + ($r.artifact.expires_at | split("T")[0]) else "" end) +
-          "</div>" +
-          "<details><summary>🖼️ Screenshots</summary>" +
-          "<a href=\"" + $r.artifact.url + "\" target=\"_blank\">View screenshots in artifacts</a>" +
-          "</details>"
-          else
-          "<div class=\"artifact-none\">✅ No artifacts (clean run)</div>"
-          end) +
-          (if ($r.failures|length) > 0 then
-          "<details><summary>❌ Failed tests</summary><ul>" + ($r.failures | map("<li>" + . + "</li>") | join("")) + "</ul></details>"
-          else "" end) +
-          "</li>"
+            .[] |
+            . as $r |
+            $r.status as $s |
+            (if $s.failures > 0 then "fail" else "pass" end) as $cls |
+            "<li>" +
+              "<a href=\"" + $base_url + $r.url + "\">" + $r.sha + " (run " + $r.run_id + ")</a> " +
+              "<span class=\"" + $cls + "\">" + ($s.passes|tostring) + " ✅ / " + ($s.failures|tostring) + " ❌</span>" +
+              "<div class=\"meta\">" + $r.message + " — " + $r.author + " · " + $r.branch + " · " +
+                (if $s.duration then ($s.duration / 1000 | floor | tostring) + "s" else "—" end) +
+                " · " + $r.human_timestamp +
+              "</div>" +
+              (if ($r.failures | length) > 0 and $r.artifact.present then
+                 "<a class=\"artifact-btn\" href=\"" + $r.artifact.url + "\" target=\"_blank\">📦 Download Artifacts</a>" +
+                 "<div class=\"artifact-meta\">📦 " + ($r.artifact.size_mb|tostring) + " MB" +
+                 (if $r.artifact.expires_at != null then " · ⏳ expires " + ($r.artifact.expires_at | split("T")[0]) else "" end) +
+                 "</div>" +
+                 "<details><summary>🖼️ Screenshots</summary>" +
+                   "<a href=\"" + $r.artifact.url + "\" target=\"_blank\">View screenshots in artifact zip</a>" +
+                 "</details>"
+               else
+                 "<div class=\"artifact-none\">✅ No failed tests / no artifacts</div>"
+               end) +
+              (if ($r.failures|length) > 0 then
+                 "<details><summary>❌ Failed tests</summary><ul>" +
+                 ($r.failures | map("<li>" + . + "</li>") | join("")) +
+                 "</ul></details>"
+               else "" end) +
+            "</li>"
           ' "$HISTORY_FILE")
 
           awk -v items="$DASHBOARD_ITEMS" '
