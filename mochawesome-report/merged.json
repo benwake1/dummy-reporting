@@ -12,13 +12,13 @@
     "hasOther": false,
     "skipped": 0,
     "hasSkipped": false,
-    "start": "2026-01-24T13:52:07.818Z",
-    "end": "2026-01-24T13:52:07.892Z",
-    "duration": 74
+    "start": "2026-01-24T13:56:45.850Z",
+    "end": "2026-01-24T13:56:45.937Z",
+    "duration": 87
   },
   "results": [
     {
-      "uuid": "1323776b-bb55-49a4-97c3-90a0430ac93f",
+      "uuid": "84ea0539-532f-4230-8fa3-60a58b98c72a",
       "title": "",
       "fullFile": "cypress/e2e/demo.cy.js",
       "file": "cypress/e2e/demo.cy.js",
@@ -27,7 +27,7 @@
       "tests": [],
       "suites": [
         {
-          "uuid": "aa8c3c43-7e03-4e15-8371-3a61598abbdf",
+          "uuid": "27232c46-c521-449b-a6f1-edbf4066ef24",
           "title": "Dummy test",
           "fullFile": "",
           "file": "",
@@ -38,7 +38,7 @@
               "title": "always passes",
               "fullTitle": "Dummy test always passes",
               "timedOut": null,
-              "duration": 34,
+              "duration": 31,
               "state": "passed",
               "speed": "fast",
               "pass": true,
@@ -47,20 +47,20 @@
               "context": null,
               "code": "expect(true).to.equal(true);",
               "err": {},
-              "uuid": "9f7ad18a-606f-4639-a011-9fbb6d36f2aa",
-              "parentUUID": "aa8c3c43-7e03-4e15-8371-3a61598abbdf",
+              "uuid": "dc8141c4-8689-4140-a9b0-24dcf183b412",
+              "parentUUID": "27232c46-c521-449b-a6f1-edbf4066ef24",
               "isHook": false,
               "skipped": false
             }
           ],
           "suites": [],
           "passes": [
-            "9f7ad18a-606f-4639-a011-9fbb6d36f2aa"
+            "dc8141c4-8689-4140-a9b0-24dcf183b412"
           ],
           "failures": [],
           "pending": [],
           "skipped": [],
-          "duration": 34,
+          "duration": 31,
           "root": false,
           "rootEmpty": false,
           "_timeout": 2000
