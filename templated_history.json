@@ -1,5 +1,30 @@
 [
   {
+    "sha": "5b3a9a5417136a18ffc245d97860f04954500b66",
+    "run_id": "21323116993",
+    "url": "reports/5b3a9a5417136a18ffc245d97860f04954500b66/run-21323116993/",
+    "timestamp": "2026-01-24T23:10:40Z",
+    "human_timestamp": "Jan 24, 2026 23:10 UTC",
+    "branch": "main",
+    "message": "Update template.html",
+    "author": "benwake1",
+    "status": {
+      "passes": 1,
+      "failures": 1,
+      "pending": 0,
+      "duration": 6356
+    },
+    "failures": [
+      "Intentionally fails to demo screenshots and videos"
+    ],
+    "artifact": {
+      "present": true,
+      "url": "https://github.com/benwake1/dummy-reporting/actions/runs/21323116993#artifacts",
+      "size_mb": 0,
+      "expires_at": "2026-02-07T23:10:27Z"
+    }
+  },
+  {
     "sha": "8bc1da4ac1525c816f6a9650fc5a343cb873aa8a",
     "run_id": "21323077954",
     "url": "reports/8bc1da4ac1525c816f6a9650fc5a343cb873aa8a/run-21323077954/",
@@ -202,24 +227,6 @@
       "failures": 0,
       "pending": 0,
       "duration": 100
-    },
-    "failures": [],
-    "screenshots": []
-  },
-  {
-    "sha": "71de3bdee6b1bc114d8705ab05c8bf8f2c40287b",
-    "run_id": "21320268171",
-    "url": "reports/71de3bdee6b1bc114d8705ab05c8bf8f2c40287b/run-21320268171/",
-    "timestamp": "2026-01-24T19:19:44Z",
-    "human_timestamp": "Jan 24, 2026 19:19 UTC",
-    "branch": "main",
-    "message": "Update cypress-templated.yml",
-    "author": "benwake1",
-    "status": {
-      "passes": 1,
-      "failures": 0,
-      "pending": 0,
-      "duration": 99
     },
     "failures": [],
     "screenshots": []
