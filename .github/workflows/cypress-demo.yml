@@ -148,7 +148,7 @@ jobs:
           <ul>
           HTML
           
-                    jq -r "$HISTORY_FILE" >> gh-pages/index.html <<'JQ'
+          jq -r '
           .[] |
           . as $r |
           $r.status as $s |
@@ -164,17 +164,17 @@ jobs:
           " · " + $r.human_timestamp +
           "</div>" +
           (if ($r.failures|length) > 0 then
-          "<details><summary>❌ Failed tests</summary><ul>" +
-          ($r.failures | map("<li>" + . + "</li>") | join("")) +
-          "</ul></details>"
+            "<details><summary>❌ Failed tests</summary><ul>" +
+            ($r.failures | map("<li>" + . + "</li>") | join("")) +
+            "</ul></details>"
           else "" end) +
           (if ($r.screenshots|length) > 0 then
-          "<details><summary>🖼️ Screenshots</summary>" +
-          ($r.screenshots | map("<img src=\"" + . + "\">") | join("")) +
-          "</details>"
+            "<details><summary>🖼️ Screenshots</summary>" +
+            ($r.screenshots | map("<img src=\"" + . + "\">") | join("")) +
+            "</details>"
           else "" end) +
           "</li>"
-          JQ
+          ' "$HISTORY_FILE" >> gh-pages/index.html
 
           cat >> gh-pages/index.html <<'HTML'
           </ul>
