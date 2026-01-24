@@ -40,7 +40,6 @@ jobs:
             --reportDir mochawesome-report/html \
             --reportFilename index
 
-      # Checkout Pages
       - name: Checkout gh-pages
         uses: actions/checkout@v4
         with:
@@ -51,164 +50,61 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      # Build Pages content
       - name: Prepare Pages
         run: |
           set -e
 
           REPORT_PATH="reports/${{ github.sha }}/run-${{ github.run_id }}"
-          PAGE_URL="$REPORT_PATH/"
+          PAGE_URL="reports/${{ github.sha }}/run-${{ github.run_id }}/"
           TS="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
           HUMAN_TS="$(date -u +"%b %d, %Y %H:%M UTC")"
 
           mkdir -p "gh-pages/$REPORT_PATH"
           cp -r mochawesome-report/html/* "gh-pages/$REPORT_PATH"
 
-          # Copy screenshots
+          # Copy screenshots and enumerate files
+          SCREENSHOTS="[]"
           if [ -d cypress/screenshots ]; then
             mkdir -p "gh-pages/$REPORT_PATH/screenshots"
             cp -r cypress/screenshots/* "gh-pages/$REPORT_PATH/screenshots"
+            SCREENSHOTS=$(find "gh-pages/$REPORT_PATH/screenshots" -type f | sed "s|^gh-pages/||" | jq -R . | jq -s .)
           fi
 
-          # Extract failed tests
-          FAILURES="$(jq '
-            [.results[].suites[].tests[]? 
+          # Failed tests
+          FAILURES=$(jq '
+            [.results[].suites[].tests[]?
               | select(.fail)
               | .title]
-          ' mochawesome-report/merged.json)"
+          ' mochawesome-report/merged.json)
 
           # Stats
-          STATUS="$(jq '.stats | {
+          STATUS=$(jq '.stats | {
             passes,
             failures,
             pending,
             duration
-          }' mochawesome-report/merged.json)"
+          }' mochawesome-report/merged.json)
 
-          # Git metadata
           MSG="$(git log -1 --pretty=%s)"
           AUTHOR="$(git log -1 --pretty=%an)"
           BRANCH="${GITHUB_REF#refs/heads/}"
 
-          # Load history
-          if [ -f gh-pages/history.json ]; then
-            HISTORY="$(cat gh-pages/history.json)"
-          else
-            HISTORY="[]"
-          fi
+          HISTORY_FILE="gh-pages/history.json"
+          [ -f "$HISTORY_FILE" ] || echo "[]" > "$HISTORY_FILE"
 
-          UPDATED="$(echo "$HISTORY" | jq \
+          UPDATED=$(jq \
             --arg sha "${{ github.sha }}" \
+            --arg run_id "${{ github.run_id }}" \
             --arg url "$PAGE_URL" \
             --arg ts "$TS" \
             --arg hts "$HUMAN_TS" \
-            --arg run_id "${{ github.run_id }}" \
             --arg branch "$BRANCH" \
             --arg msg "$MSG" \
             --arg author "$AUTHOR" \
             --argjson status "$STATUS" \
             --argjson failures "$FAILURES" \
+            --argjson screenshots "$SCREENSHOTS" \
             '. += [{
               sha: $sha,
               run_id: $run_id,
-              url: $url,
-              timestamp: $ts,
-              human_timestamp: $hts,
-              branch: $branch,
-              message: $msg,
-              author: $author,
-              status: $status,
-              failures: $failures
-            }]
-            | sort_by(.timestamp)
-            | reverse
-            | .[:10]'
-          )"
-
-          echo "$UPDATED" > gh-pages/history.json
-
-          # Cleanup old reports
-          cd gh-pages
-          jq -r '.[].sha' history.json | sort -u > /tmp/keep.txt
-          if [ -d reports ]; then
-            for d in reports/*; do
-              b="$(basename "$d")"
-              if ! grep -q "$b" /tmp/keep.txt; then
-                rm -rf "$d"
-              fi
-            done
-          fi
-          cd -
-
-          # Build dashboard
-          cat > gh-pages/history.html <<'EOF'
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="UTF-8">
-            <title>Cypress CI Dashboard</title>
-            <style>
-              body { font-family: system-ui; background:#0f172a; color:#e5e7eb; padding:2rem; }
-              li { background:#020617; margin-bottom:1rem; padding:1rem; border-radius:8px; }
-              a { color:#38bdf8; font-weight:600; text-decoration:none; }
-              .meta { font-size:.85rem; opacity:.7; }
-              .pass { color:#22c55e; font-weight:bold; }
-              .fail { color:#ef4444; font-weight:bold; }
-              details { margin-top:.5rem; }
-              img { max-width:140px; border-radius:4px; margin:.25rem; }
-            </style>
-          </head>
-          <body>
-            <h1>🧪 Cypress CI Dashboard</h1>
-            <ul>
-          EOF
-
-          echo "$UPDATED" | jq -r '
-            group_by(.sha)[] |
-            .[0] as $r |
-            $r.status as $s |
-            (if $s.failures > 0 then "fail" else "pass" end) as $cls |
-            "<li>" +
-              "<a href=\"" + $r.url + "\">" + $r.sha + "</a> " +
-              "<span class=\"" + $cls + "\">" +
-                ($s.passes|tostring) + " ✅ / " + ($s.failures|tostring) + " ❌</span>" +
-              "<div class=\"meta\">" +
-                $r.message + " — " + $r.author +
-                " · " + $r.branch +
-                " · " +
-                (if $s.duration then
-                  (($s.duration / 1000 | floor | tostring) + "s")
-                else
-                  "—"
-                end) +
-                " · " + $r.human_timestamp +
-              "</div>" +
-
-              (if ($r.failures|length) > 0 then
-                "<details><summary>❌ Failed tests</summary><ul>" +
-                ($r.failures | map("<li>" + . + "</li>") | join("")) +
-                "</ul></details>"
-              else "" end) +
-
-              "<details><summary>🖼️ Screenshots</summary>" +
-              "<div>" +
-              "<img src=\"" + $r.url + "screenshots/\" onerror=\"this.style.display='none'\">" +
-              "</div></details>" +
-
-            "</li>"
-          ' >> gh-pages/history.html
-
-          cat >> gh-pages/history.html <<'EOF'
-            </ul>
-          </body>
-          </html>
-          EOF
-
-          echo '<meta http-equiv="refresh" content="0; url=history.html">' > gh-pages/index.html
-
-      - name: Deploy Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: gh-pages
-          keep_files: true
+              url:
