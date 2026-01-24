@@ -1,4 +1,4 @@
-name: Cypress Demo - Templated Dashboard
+name: Cypress Demo - With Templated Pages
 
 on:
   push:
@@ -11,17 +11,18 @@ permissions:
   pull-requests: write
 
 jobs:
-  test-and-publish-templated:
+  test-and-publish:
     runs-on: ubuntu-latest
-
     steps:
-      # 1️⃣ Checkout main branch for dependencies
-      - name: Checkout main for dependencies
+
+      # 1️⃣ Checkout main branch (ensure template & code exist)
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          path: main-checkout
 
-      # 2️⃣ Setup Node and npm cache
+      # 2️⃣ Setup Node
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -31,20 +32,24 @@ jobs:
       # 3️⃣ Install dependencies
       - name: Install deps
         run: npm ci
+        working-directory: main-checkout
 
       # 4️⃣ Run Cypress tests
       - name: Run Cypress
         run: npm run test:ci
+        working-directory: main-checkout
 
-      # 5️⃣ Merge Mochawesome JSON
+      # 5️⃣ Merge Mochawesome reports
       - name: Merge Mochawesome
         run: npx mochawesome-merge mochawesome-report/*.json > mochawesome-report/merged.json
+        working-directory: main-checkout
 
       # 6️⃣ Generate HTML report
       - name: Generate HTML report
         run: npx marge mochawesome-report/merged.json --reportDir mochawesome-report/html --reportFilename index
+        working-directory: main-checkout
 
-      # 7️⃣ Checkout gh-pages branch for publishing
+      # 7️⃣ Checkout gh-pages branch
       - name: Checkout gh-pages
         uses: actions/checkout@v4
         with:
@@ -52,25 +57,19 @@ jobs:
           path: gh-pages
           fetch-depth: 0
 
-      # 8️⃣ Checkout main branch again for template access
-      - name: Checkout main branch for template
-        uses: actions/checkout@v4
-        with:
-          path: main-checkout
-          fetch-depth: 0
-
-      # 9️⃣ Install jq
+      # 8️⃣ Install jq
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      # 🔟 Prepare templated pages
-      - name: Prepare Templated Pages
+      # 9️⃣ Prepare Pages
+      - name: Prepare Pages
         run: |
           set -e
 
           REPO="${{ github.repository }}"
           SHA="${{ github.sha }}"
           RUN_ID="${{ github.run_id }}"
+
           REPORT_PATH="reports/$SHA/run-$RUN_ID"
           PAGE_URL="$REPORT_PATH/"
 
@@ -78,28 +77,27 @@ jobs:
           HUMAN_TS="$(date -u +"%b %d, %Y %H:%M UTC")"
 
           mkdir -p "gh-pages/$REPORT_PATH"
-          cp -r mochawesome-report/html/* "gh-pages/$REPORT_PATH"
+          cp -r main-checkout/mochawesome-report/html/* "gh-pages/$REPORT_PATH"
 
           # Screenshots
           SCREENSHOTS="[]"
-          if [ -d cypress/screenshots ]; then
+          if [ -d main-checkout/cypress/screenshots ]; then
             mkdir -p "gh-pages/$REPORT_PATH/screenshots"
-            cp -r cypress/screenshots/* "gh-pages/$REPORT_PATH/screenshots"
+            cp -r main-checkout/cypress/screenshots/* "gh-pages/$REPORT_PATH/screenshots"
             SCREENSHOTS=$(find "gh-pages/$REPORT_PATH/screenshots" -type f | sed "s|gh-pages/||" | jq -R . | jq -s .)
           fi
 
           # Failed tests
-          FAILURES=$(jq '[.results[].suites[].tests[]? | select(.fail) | .title]' mochawesome-report/merged.json)
+          FAILURES=$(jq '[.results[].suites[].tests[]? | select(.fail) | .title]' main-checkout/mochawesome-report/merged.json)
 
-          # Status
-          STATUS=$(jq '.stats | { passes, failures, pending, duration }' mochawesome-report/merged.json)
+          # Stats
+          STATUS=$(jq '.stats | { passes, failures, pending, duration }' main-checkout/mochawesome-report/merged.json)
 
           MSG=$(git log -1 --pretty=%s)
           AUTHOR=$(git log -1 --pretty=%an)
           BRANCH="${GITHUB_REF#refs/heads/}"
 
-          # History file
-          HISTORY_FILE="gh-pages/templated_history.json"
+          HISTORY_FILE="gh-pages/history.json"
           [ -f "$HISTORY_FILE" ] || echo "[]" > "$HISTORY_FILE"
 
           UPDATED=$(jq \
@@ -130,7 +128,7 @@ jobs:
 
           echo "$UPDATED" > "$HISTORY_FILE"
 
-          # Generate list items
+          # Build dashboard from template
           DASHBOARD_ITEMS=$(jq -r '
             .[] |
             . as $r |
@@ -159,12 +157,12 @@ jobs:
             "</li>"
           ' "$HISTORY_FILE")
 
+          # Escape & safely inject into template
+          ESCAPED_DASHBOARD_ITEMS=$(printf '%s\n' "$DASHBOARD_ITEMS" | sed 's/[&/\]/\\&/g')
+          sed "s|<!-- DASHBOARD_ITEMS -->|$ESCAPED_DASHBOARD_ITEMS|" main-checkout/.cypress-dashbord/template.html > gh-pages/templated_index.html
 
-          # Inject into template from main-checkout
-          sed "s|<!-- DASHBOARD_ITEMS -->|$DASHBOARD_ITEMS|" main-checkout/.cypress-dashbord/template.html > gh-pages/templated_index.html
-
-      # 1️⃣1️⃣ Deploy Pages (templated)
-      - name: Deploy Pages (templated)
+      # 10️⃣ Deploy Pages
+      - name: Deploy Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
