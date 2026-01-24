@@ -10,9 +10,9 @@ permissions:
   contents: write
   pull-requests: write
 
-concurrency:
-  group: cypress-pages
-  cancel-in-progress: true
+#concurrency:
+#  group: cypress-pages
+#  cancel-in-progress: true
 
 jobs:
   test-and-publish:
@@ -134,7 +134,7 @@ jobs:
           EOF
 
           echo "$UPDATED_HISTORY" | jq -r \
-            '.[] | "<a href=\"\(.url)\">\(.sha) (run \(.run))</a><span>\(.timestamp)</span>"' \
+            '.[] | "<li><a href=\"\(.url)\">\(.sha) (run \(.run))</a><span>\(.timestamp)</span></li>"'
             >> gh-pages/history.html
 
           cat >> gh-pages/history.html <<'EOF'
