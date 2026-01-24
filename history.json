@@ -1,5 +1,23 @@
 [
   {
+    "sha": "e9073e1a5ec37f59159284a5f17c9437ab360121",
+    "run_id": "21317832981",
+    "url": "reports/e9073e1a5ec37f59159284a5f17c9437ab360121/run-21317832981/",
+    "timestamp": "2026-01-24T16:08:34Z",
+    "human_timestamp": "Jan 24, 2026 16:08 UTC",
+    "branch": "main",
+    "message": "Refactor Cypress workflow for report generation",
+    "author": "benwake1",
+    "status": {
+      "passes": 1,
+      "failures": 0,
+      "pending": 0,
+      "duration": 85
+    },
+    "failures": [],
+    "screenshots": []
+  },
+  {
     "sha": "f3716215c835f19addb07ebf61a93c6d6bd1f519",
     "run_id": "21317508407",
     "url": "reports/f3716215c835f19addb07ebf61a93c6d6bd1f519/run-21317508407/",
@@ -79,12 +97,5 @@
     "run_id": "21316276137",
     "url": "/reports/ce19c2c766734142459d50b1d165d56130324ac4/run-1/",
     "timestamp": "2026-01-24T14:05:06Z"
-  },
-  {
-    "sha": "ce19c2c766734142459d50b1d165d56130324ac4",
-    "run": "1",
-    "run_id": "21316238807",
-    "url": "/reports/ce19c2c766734142459d50b1d165d56130324ac4/run-1/",
-    "timestamp": "2026-01-24T14:02:15Z"
   }
 ]
