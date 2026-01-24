@@ -32,7 +32,7 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      # 4️⃣ Run Cypress tests
+      # 4️⃣ Run Cypress tests (do not fail pipeline)
       - name: Run Cypress
         run: npm run test:ci
         continue-on-error: true
@@ -102,6 +102,8 @@ jobs:
           # -------------------------------
           # Artifact metadata
           # -------------------------------
+          ARTIFACT_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}#artifacts"
+
           ARTIFACT_JSON=$(curl -s \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github+json" \
@@ -110,7 +112,6 @@ jobs:
           ARTIFACT_PRESENT=$(echo "$ARTIFACT_JSON" | jq '(.artifacts | length) > 0')
           ARTIFACT_SIZE_MB=$(echo "$ARTIFACT_JSON" | jq 'if (.artifacts | length) > 0 then (.artifacts[0].size_in_bytes / 1024 / 1024 | floor) else null end')
           ARTIFACT_EXPIRES=$(echo "$ARTIFACT_JSON" | jq -r 'if (.artifacts | length) > 0 then .artifacts[0].expires_at else null end')
-          ARTIFACT_DOWNLOAD_URL=$(echo "$ARTIFACT_JSON" | jq -r 'if (.artifacts | length) > 0 then .artifacts[0].archive_download_url else null end')
 
           # -------------------------------
           # Test metadata
@@ -135,7 +136,7 @@ jobs:
             --arg msg "$MSG" \
             --arg author "$AUTHOR" \
             --argjson artifact_present "$ARTIFACT_PRESENT" \
-            --arg artifact_url "$ARTIFACT_DOWNLOAD_URL" \
+            --arg artifact_url "$ARTIFACT_URL" \
             --argjson artifact_size "$ARTIFACT_SIZE_MB" \
             --arg artifact_expires "$ARTIFACT_EXPIRES" \
             --argjson status "$STATUS" \
@@ -177,7 +178,7 @@ jobs:
                 " · " + $r.human_timestamp +
               "</div>" +
               (if ($r.failures | length) > 0 and $r.artifact.present then
-                 "<a class=\"artifact-btn\" href=\"" + $r.artifact.url + "\" target=\"_blank\">📦 Download Artifacts</a>" +
+                 "<a class=\"artifact-btn\" href=\"" + $r.artifact.url + "\" target=\"_blank\">📦 Artifacts</a>" +
                  "<div class=\"artifact-meta\">📦 " + ($r.artifact.size_mb|tostring) + " MB" +
                  (if $r.artifact.expires_at != null then " · ⏳ expires " + ($r.artifact.expires_at | split("T")[0]) else "" end) +
                  "</div>" +
