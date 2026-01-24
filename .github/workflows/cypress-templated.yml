@@ -53,8 +53,8 @@ jobs:
           retention-days: 14
           path: |
             mochawesome-report/html
-            mochawesome-report/merged.json
             cypress/screenshots
+          if-no-files-found: ignore
 
       # 7️⃣ Checkout gh-pages branch for publishing
       - name: Checkout gh-pages
@@ -103,8 +103,25 @@ jobs:
 
           ARTIFACT=$(echo "$ARTIFACT_JSON" | jq '.artifacts[0]')
           ARTIFACT_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}#artifacts"
-          ARTIFACT_SIZE_MB=$(echo "$ARTIFACT" | jq '(.size_in_bytes / 1024 / 1024 | floor)')
-          ARTIFACT_EXPIRES=$(echo "$ARTIFACT" | jq -r '.expires_at')
+          
+          
+          ARTIFACT_PRESENT=$(echo "$ARTIFACT_JSON" | jq '(.artifacts | length) > 0')
+          
+          
+          ARTIFACT_SIZE_MB=$(echo "$ARTIFACT_JSON" | jq '
+          if (.artifacts | length) > 0
+          then (.artifacts[0].size_in_bytes / 1024 / 1024 | floor)
+          else null
+          end
+          ')
+          
+          
+          ARTIFACT_EXPIRES=$(echo "$ARTIFACT_JSON" | jq -r '
+          if (.artifacts | length) > 0
+          then .artifacts[0].expires_at
+          else null
+          end
+          ')
 
           # Failed tests
           FAILURES=$(jq '[.results[].suites[].tests[]? | select(.fail) | .title]' mochawesome-report/merged.json)
@@ -132,6 +149,7 @@ jobs:
             --arg size "$ARTIFACT_SIZE_MB" \
             --argjson status "$STATUS" \
             --argjson failures "$FAILURES" \
+            --argjson artifact_present "$ARTIFACT_PRESENT" \
             '. += [{
               sha: $sha,
               run_id: $run_id,
@@ -144,6 +162,7 @@ jobs:
               status: $status,
               failures: $failures,
               artifact: {
+                present: $artifact_present,
                 url: $artifact_url,
                 size_mb: $size,
                 expires_at: $expires
@@ -159,7 +178,6 @@ jobs:
             (if $s.failures > 0 then "fail" else "pass" end) as $cls |
             "<li>" +
               "<a href=\"'"$BASE_URL"'"+$r.url+"\">" + $r.sha + " (run " + $r.run_id + ")</a> " +
-              "<a class=\"artifact-btn\" href=\"" + $r.artifact.url + "\" target=\"_blank\">📦 Artifacts</a> " +
               "<span class=\"" + $cls + "\">" +
                 ($s.passes|tostring) + " ✅ / " + ($s.failures|tostring) + " ❌</span>" +
               "<div class=\"meta\">" +
@@ -168,18 +186,23 @@ jobs:
                 " · " + (if $s.duration then ($s.duration / 1000 | floor | tostring) + "s" else "—" end) +
                 " · " + $r.human_timestamp +
               "</div>" +
-              "<div class=\"artifact-meta\">" +
-                "📦 " + ($r.artifact.size_mb|tostring) + " MB" +
-                " · ⏳ expires " + ($r.artifact.expires_at | sub(\"T.*\"; \"\")) +
-              "</div>" +
               (if ($r.failures|length) > 0 then
                 "<details><summary>❌ Failed tests</summary><ul>" +
                 ($r.failures | map("<li>" + . + "</li>") | join("")) +
                 "</ul></details>"
               else "" end) +
+              (if $r.artifact.present then
+              "<a class=\"artifact-btn\" href=\"" + $r.artifact.url + "\" target=\"_blank\">📦 Artifacts</a>" +
+              "<div class=\"artifact-meta\">" +
+              "📦 " + ($r.artifact.size_mb|tostring) + " MB" +
+              " · ⏳ expires " + ($r.artifact.expires_at | sub(\"T.*\"; \"\")) +
+              "</div>" +
               "<details><summary>🖼️ Screenshots</summary>" +
-                "<a href=\"" + $r.artifact.url + "\" target=\"_blank\">View screenshots in artifacts</a>" +
-              "</details>" +
+              "<a href=\"" + $r.artifact.url + "\" target=\"_blank\">View screenshots in artifacts</a>" +
+              "</details>"
+              else
+              "<span class=\"artifact-none\">✅ No artifacts (clean run)</span>"
+              end)
             "</li>"
           ' "$HISTORY_FILE")
 
