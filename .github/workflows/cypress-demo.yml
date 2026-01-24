@@ -1,4 +1,4 @@
-name: Cypress Demo CI
+name: Cypress Demo - With Pages
 
 on:
   push:
@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout main branch
+      - name: Checkout main
         uses: actions/checkout@v4
 
       - name: Setup Node
@@ -24,31 +24,24 @@ jobs:
           node-version: 18
           cache: npm
 
-      - name: Install dependencies
+      - name: Install deps
         run: npm ci
 
-      - name: Run Cypress tests
+      - name: Run Cypress
         run: npm run test:ci
 
-      - name: Merge Mochawesome reports
+      - name: Merge Mochawesome
         run: |
           npx mochawesome-merge mochawesome-report/*.json > mochawesome-report/merged.json
 
       - name: Generate HTML report
         run: |
-          npx marge mochawesome-report/merged.json --reportDir mochawesome-report/html --reportFilename index
+          npx marge mochawesome-report/merged.json \
+            --reportDir mochawesome-report/html \
+            --reportFilename index
 
-      - name: Upload test artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: mochawesome-${{ github.sha }}
-          path: |
-            mochawesome-report
-            cypress/screenshots
-            cypress/videos
-
-      # Checkout gh-pages branch
-      - name: Checkout gh-pages branch
+      # Checkout Pages
+      - name: Checkout gh-pages
         uses: actions/checkout@v4
         with:
           ref: gh-pages
@@ -58,95 +51,145 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      # Prepare GitHub Pages content
-      - name: Prepare GitHub Pages content
+      # Build Pages content
+      - name: Prepare Pages
         run: |
           set -e
 
           REPORT_PATH="reports/${{ github.sha }}/run-${{ github.run_id }}"
-          TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          PAGE_URL="$REPORT_PATH/"
+          TS="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
           HUMAN_TS="$(date -u +"%b %d, %Y %H:%M UTC")"
 
           mkdir -p "gh-pages/$REPORT_PATH"
           cp -r mochawesome-report/html/* "gh-pages/$REPORT_PATH"
 
-          # Extract pass/fail/pending counts
-          STATUS="$(jq '.stats | {passes, failures, pending, duration}' mochawesome-report/merged.json)"
+          # Copy screenshots
+          if [ -d cypress/screenshots ]; then
+            mkdir -p "gh-pages/$REPORT_PATH/screenshots"
+            cp -r cypress/screenshots/* "gh-pages/$REPORT_PATH/screenshots"
+          fi
 
-          # Load existing history
+          # Extract failed tests
+          FAILURES="$(jq '
+            [.results[].suites[].tests[]? 
+              | select(.fail)
+              | .title]
+          ' mochawesome-report/merged.json)"
+
+          # Stats
+          STATUS="$(jq '.stats | {
+            passes,
+            failures,
+            pending,
+            duration
+          }' mochawesome-report/merged.json)"
+
+          # Git metadata
+          MSG="$(git log -1 --pretty=%s)"
+          AUTHOR="$(git log -1 --pretty=%an)"
+          BRANCH="${GITHUB_REF#refs/heads/}"
+
+          # Load history
           if [ -f gh-pages/history.json ]; then
             HISTORY="$(cat gh-pages/history.json)"
           else
             HISTORY="[]"
           fi
 
-          # Append new run, normalize old entries, sort, keep last 10
-          UPDATED_HISTORY="$(echo "$HISTORY" | jq \
+          UPDATED="$(echo "$HISTORY" | jq \
             --arg sha "${{ github.sha }}" \
-            --arg url "$REPORT_PATH/" \
-            --arg ts "$TIMESTAMP" \
-            --arg human_ts "$HUMAN_TS" \
+            --arg url "$PAGE_URL" \
+            --arg ts "$TS" \
+            --arg hts "$HUMAN_TS" \
             --arg run_id "${{ github.run_id }}" \
-            --arg run_attempt "${{ github.run_attempt }}" \
+            --arg branch "$BRANCH" \
+            --arg msg "$MSG" \
+            --arg author "$AUTHOR" \
             --argjson status "$STATUS" \
+            --argjson failures "$FAILURES" \
             '. += [{
-                  "sha": $sha,
-                  "run_id": $run_id,
-                  "run_attempt": $run_attempt,
-                  "url": $url,
-                  "timestamp": $ts,
-                  "human_timestamp": $human_ts,
-                  "status": $status
-                }]
-             | map(if has("id") then del(.id) else . end)
-             | sort_by(.timestamp)
-             | reverse
-             | .[:10]')"
+              sha: $sha,
+              run_id: $run_id,
+              url: $url,
+              timestamp: $ts,
+              human_timestamp: $hts,
+              branch: $branch,
+              message: $msg,
+              author: $author,
+              status: $status,
+              failures: $failures
+            }]
+            | sort_by(.timestamp)
+            | reverse
+            | .[:10]'
+          )"
 
-          echo "$UPDATED_HISTORY" > gh-pages/history.json
+          echo "$UPDATED" > gh-pages/history.json
 
-          # Generate HTML dashboard
+          # Cleanup old reports
+          cd gh-pages
+          jq -r '.[].sha' history.json | sort -u > /tmp/keep.txt
+          if [ -d reports ]; then
+            for d in reports/*; do
+              b="$(basename "$d")"
+              if ! grep -q "$b" /tmp/keep.txt; then
+                rm -rf "$d"
+              fi
+            done
+          fi
+          cd -
+
+          # Build dashboard
           cat > gh-pages/history.html <<'EOF'
           <!DOCTYPE html>
           <html>
           <head>
-            <meta charset="UTF-8" />
-            <title>Cypress Test History</title>
+            <meta charset="UTF-8">
+            <title>Cypress CI Dashboard</title>
             <style>
-              body { font-family: system-ui; background: #0f172a; color: #e5e7eb; padding: 2rem; }
-              li { background: #020617; margin-bottom: 0.75rem; padding: 1rem; border-radius: 8px; }
-              a { color: #38bdf8; font-weight: 600; text-decoration: none; }
-              span { opacity: 0.8; margin-left: 0.5rem; }
-              .pass { color: #22c55e; font-weight: bold; }
-              .fail { color: #ef4444; font-weight: bold; }
-              .pending { color: #fbbf24; font-weight: bold; }
-              details { margin-top: 0.25rem; }
-              summary { cursor: pointer; }
+              body { font-family: system-ui; background:#0f172a; color:#e5e7eb; padding:2rem; }
+              li { background:#020617; margin-bottom:1rem; padding:1rem; border-radius:8px; }
+              a { color:#38bdf8; font-weight:600; text-decoration:none; }
+              .meta { font-size:.85rem; opacity:.7; }
+              .pass { color:#22c55e; font-weight:bold; }
+              .fail { color:#ef4444; font-weight:bold; }
+              details { margin-top:.5rem; }
+              img { max-width:140px; border-radius:4px; margin:.25rem; }
             </style>
           </head>
           <body>
-            <h1>🧪 Cypress Test Report History</h1>
+            <h1>🧪 Cypress CI Dashboard</h1>
             <ul>
           EOF
 
-          # Group by SHA and render
-          echo "$UPDATED_HISTORY" | jq -r '
+          echo "$UPDATED" | jq -r '
             group_by(.sha)[] |
-            . as $group |
-            $group[0] as $latest |
-            $latest.status as $status |
-            (if $status.failures > 0 then "fail" elif $status.pending > 0 then "pending" else "pass" end) as $status_class |
-            "<li><a href=\"" + $latest.url + "\">" + $latest.sha + " (latest run)</a> <span class=\"" + $status_class + "\">" + ($status.passes|tostring) + " ✅ / " + ($status.failures|tostring) + " ❌</span>" +
-            (if ($group|length) > 1 then
-                "<details><summary>Reruns</summary><ul>" +
-                ($group[1:] | map(
-                    "<li><a href=\"" + .url + "\">Run " + .run_id + "</a> <span>Pass: " + (.status.passes|tostring) +
-                    " Fail: " + (.status.failures|tostring) +
-                    " Pending: " + (.status.pending|tostring) +
-                    " — " + .human_timestamp + "</span></li>"
-                ) | join("")) +
+            .[0] as $r |
+            $r.status as $s |
+            (if $s.failures > 0 then "fail" else "pass" end) as $cls |
+            "<li>" +
+              "<a href=\"" + $r.url + "\">" + $r.sha + "</a> " +
+              "<span class=\"" + $cls + "\">" +
+                ($s.passes|tostring) + " ✅ / " + ($s.failures|tostring) + " ❌</span>" +
+              "<div class=\"meta\">" +
+                $r.message + " — " + $r.author +
+                " · " + $r.branch +
+                " · " + ($s.duration / 1000 | floor | tostring) + "s" +
+                " · " + $r.human_timestamp +
+              "</div>" +
+
+              (if ($r.failures|length) > 0 then
+                "<details><summary>❌ Failed tests</summary><ul>" +
+                ($r.failures | map("<li>" + . + "</li>") | join("")) +
                 "</ul></details>"
-             else "" end) +
+              else "" end) +
+
+              "<details><summary>🖼️ Screenshots</summary>" +
+              "<div>" +
+              "<img src=\"" + $r.url + "screenshots/\" onerror=\"this.style.display='none'\">" +
+              "</div></details>" +
+
             "</li>"
           ' >> gh-pages/history.html
 
@@ -156,30 +199,11 @@ jobs:
           </html>
           EOF
 
-          # redirect index.html to history.html
           echo '<meta http-equiv="refresh" content="0; url=history.html">' > gh-pages/index.html
 
-      # Deploy to GitHub Pages
-      - name: Deploy GitHub Pages
-        if: success()
+      - name: Deploy Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: gh-pages
-          force_orphan: false
           keep_files: true
-
-      # Comment PR with report link
-      - name: Comment PR with report link
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const sha = context.payload.pull_request?.head.sha || context.sha;
-            const url = `https://${context.repo.owner}.github.io/${context.repo.repo}/reports/${sha}/`;
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `🧪 Cypress Test Report\n\n🔗 ${url}`
-            });
