@@ -6,30 +6,97 @@
 <style>
   body { font-family: system-ui; background:#0f172a; color:#e5e7eb; padding:2rem; }
   h1 { margin-bottom:1.5rem; }
+  h2 { margin-top:2rem; }
   li { background:#020617; margin-bottom:1rem; padding:1rem; border-radius:8px; list-style:none; }
   a { color:#38bdf8; font-weight:600; text-decoration:none; }
-  .meta { font-size:.85rem; opacity:.7; margin-top:0.25rem; display:block; }
+  .meta { font-size:.85rem; opacity:.7; margin-top:.25rem; display:block; }
   .pass { color:#22c55e; font-weight:bold; }
   .fail { color:#ef4444; font-weight:bold; }
   img { max-width:160px; border-radius:6px; margin:.25rem; }
   details { margin-top:.5rem; }
+  .artifact-btn { display:inline-block; margin-top:.25rem; padding:.2rem .5rem; background:#1e293b; color:#facc15; border-radius:4px; font-size:.85rem; text-decoration:none; }
+  .artifact-meta { font-size:.8rem; opacity:.7; margin-top:.15rem; }
+  .artifact-none { font-size:.8rem; opacity:.7; margin-top:.15rem; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 <h1>🧪 Cypress CI Dashboard</h1>
+
+<h2>📊 Test Trends</h2>
+<canvas id="trendChart" width="800" height="250"></canvas>
+
 <ul>
-<li><a href="https://benwake1.github.io/dummy-reporting/reports/805964062cff02b0286318bfc3abca13d9acc784/run-21322947149/">805964062cff02b0286318bfc3abca13d9acc784 (run 21322947149)</a> <span class="pass">1 ✅</span> / <span class="fail">1 ❌</span><div class="meta">Update cypress-templated.yml — benwake1 · main · 6s · Jan 24, 2026 22:56 UTC</div><a class="artifact-btn" href="https://github.com/benwake1/dummy-reporting/actions/runs/21322947149#artifacts" target="_blank">📦 Artifacts</a><div class="artifact-meta">📦 0 MB · ⏳ expires 2026-02-07</div><details><summary>🖼️ Screenshots</summary><a href="https://github.com/benwake1/dummy-reporting/actions/runs/21322947149#artifacts" target="_blank">View screenshots in artifact zip</a></details><details><summary>❌ Failed tests</summary><ul><li>Intentionally fails to demo screenshots and videos</li></ul></details></li>
-<li><a href="https://benwake1.github.io/dummy-reporting/reports/805964062cff02b0286318bfc3abca13d9acc784/run-21322836990/">805964062cff02b0286318bfc3abca13d9acc784 (run 21322836990)</a> <span class="pass">1 ✅</span> / <span class="fail">1 ❌</span><div class="meta">Update cypress-templated.yml — benwake1 · main · 6s · Jan 24, 2026 22:47 UTC</div><a class="artifact-btn" href="https://github.com/benwake1/dummy-reporting/actions/runs/21322836990#artifacts" target="_blank">📦 Artifacts</a><div class="artifact-meta">📦 0 MB · ⏳ expires 2026-02-07</div><details><summary>🖼️ Screenshots</summary><a href="https://github.com/benwake1/dummy-reporting/actions/runs/21322836990#artifacts" target="_blank">View screenshots in artifact zip</a></details><details><summary>❌ Failed tests</summary><ul><li>Intentionally fails to demo screenshots and videos</li></ul></details></li>
-<li><a href="https://benwake1.github.io/dummy-reporting/reports/3786495f61f4af0c723ed0463d794aaa2ef80158/run-21322692060/">3786495f61f4af0c723ed0463d794aaa2ef80158 (run 21322692060)</a> <span class="pass">1 ✅</span> / <span class="fail">1 ❌</span><div class="meta">Update cypress-templated.yml — benwake1 · main · 6s · Jan 24, 2026 22:35 UTC</div><a class="artifact-btn" href="https://github.com/benwake1/dummy-reporting/actions/runs/21322692060#artifacts" target="_blank">📦 Artifacts</a><div class="artifact-meta">📦 0 MB · ⏳ expires 2026-02-07</div><details><summary>🖼️ Screenshots</summary><a href="https://github.com/benwake1/dummy-reporting/actions/runs/21322692060#artifacts" target="_blank">View screenshots in artifact zip</a></details><details><summary>❌ Failed tests</summary><ul><li>Intentionally fails to demo screenshots and videos</li></ul></details></li>
-<li><a href="https://benwake1.github.io/dummy-reporting/reports/77492b3025c03833d89b7f5607dd80e54fa5289a/run-21322582739/">77492b3025c03833d89b7f5607dd80e54fa5289a (run 21322582739)</a> <span class="pass">1 ✅</span> / <span class="fail">1 ❌</span><div class="meta">Update cypress-templated.yml — benwake1 · main · 6s · Jan 24, 2026 22:26 UTC</div><a class="artifact-btn" href="https://api.github.com/repos/benwake1/dummy-reporting/actions/artifacts/5245723062/zip" target="_blank">📦 Artifacts</a><div class="artifact-meta">📦 0 MB · ⏳ expires 2026-02-07</div><details><summary>🖼️ Screenshots</summary><a href="https://api.github.com/repos/benwake1/dummy-reporting/actions/artifacts/5245723062/zip" target="_blank">View screenshots in artifact zip</a></details><details><summary>❌ Failed tests</summary><ul><li>Intentionally fails to demo screenshots and videos</li></ul></details></li>
-<li><a href="https://benwake1.github.io/dummy-reporting/reports/259fb08a1caba8a15cf30b591f10a562d96e8efb/run-21322470409/">259fb08a1caba8a15cf30b591f10a562d96e8efb (run 21322470409)</a> <span class="pass">1 ✅</span> / <span class="fail">0 ❌</span><div class="meta">Update cypress-templated.yml — benwake1 · main · 0s · Jan 24, 2026 22:16 UTC</div><div class="artifact-none">✅ No failed tests / no artifacts</div></li>
-<li><a href="https://benwake1.github.io/dummy-reporting/reports/55c8dd316d0e20a60fb3776aa071195c2b196c77/run-21322322788/">55c8dd316d0e20a60fb3776aa071195c2b196c77 (run 21322322788)</a> <span class="pass">1 ✅</span> / <span class="fail">0 ❌</span><div class="meta">Update cypress-templated.yml — benwake1 · main · 0s · Jan 24, 2026 22:05 UTC</div><div class="artifact-none">✅ No failed tests / no artifacts</div></li>
-<li><a href="https://benwake1.github.io/dummy-reporting/reports/d1a016ee9bff0141fe516350a7a17762bb053d37/run-21320666468/">d1a016ee9bff0141fe516350a7a17762bb053d37 (run 21320666468)</a> <span class="pass">1 ✅</span> / <span class="fail">0 ❌</span><div class="meta">Update cypress-templated.yml — benwake1 · main · 0s · Jan 24, 2026 19:50 UTC</div><div class="artifact-none">✅ No failed tests / no artifacts</div></li>
-<li><a href="https://benwake1.github.io/dummy-reporting/reports/bd495ad6d7e9644b5b6a415d34da39b795232664/run-21320515254/">bd495ad6d7e9644b5b6a415d34da39b795232664 (run 21320515254)</a> <span class="pass">1 ✅</span> / <span class="fail">0 ❌</span><div class="meta">Update template.html — benwake1 · main · 0s · Jan 24, 2026 19:38 UTC</div><div class="artifact-none">✅ No failed tests / no artifacts</div></li>
-<li><a href="https://benwake1.github.io/dummy-reporting/reports/71de3bdee6b1bc114d8705ab05c8bf8f2c40287b/run-21320268171/">71de3bdee6b1bc114d8705ab05c8bf8f2c40287b (run 21320268171)</a> <span class="pass">1 ✅</span> / <span class="fail">0 ❌</span><div class="meta">Update cypress-templated.yml — benwake1 · main · 0s · Jan 24, 2026 19:19 UTC</div><div class="artifact-none">✅ No failed tests / no artifacts</div></li>
-<li><a href="https://benwake1.github.io/dummy-reporting/reports/71de3bdee6b1bc114d8705ab05c8bf8f2c40287b/run-21320211077/">71de3bdee6b1bc114d8705ab05c8bf8f2c40287b (run 21320211077)</a> <span class="pass">1 ✅</span> / <span class="fail">0 ❌</span><div class="meta">Update cypress-templated.yml — benwake1 · main · 0s · Jan 24, 2026 19:15 UTC</div><div class="artifact-none">✅ No failed tests / no artifacts</div></li>
 <!-- DASHBOARD_ITEMS -->
 </ul>
-</div>
+
+<script>
+// Fetch JSON history
+fetch('templated_history.json')
+  .then(res => res.json())
+  .then(data => {
+    data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+    const labels = data.map(r => r.human_timestamp);
+    const passes = data.map(r => r.status.passes);
+    const failures = data.map(r => r.status.failures);
+    const durations = data.map(r => r.status.duration ? (r.status.duration/1000).toFixed(1) : 0);
+
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Passes',
+            data: passes,
+            backgroundColor: 'rgba(34,197,94,0.7)'
+          },
+          {
+            label: 'Failures',
+            data: failures,
+            backgroundColor: 'rgba(239,68,68,0.7)'
+          },
+          {
+            label: 'Duration (s)',
+            data: durations,
+            type: 'line',
+            borderColor: 'gold',
+            backgroundColor: 'rgba(250,204,21,0.3)',
+            yAxisID: 'y1',
+            tension: 0.2,
+            fill: false,
+            pointRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { position: 'top' },
+          tooltip: { mode: 'index', intersect: false }
+        },
+        scales: {
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            title: { display: true, text: 'Tests Count' }
+          },
+          y1: {
+            stacked: false,
+            beginAtZero: true,
+            position: 'right',
+            title: { display: true, text: 'Duration (s)' },
+            grid: { drawOnChartArea: false }
+          },
+          x: { stacked: true }
+        }
+      }
+    });
+  });
+</script>
+
 </body>
 </html>
