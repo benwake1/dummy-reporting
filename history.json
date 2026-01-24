@@ -1,5 +1,22 @@
 [
   {
+    "sha": "f3716215c835f19addb07ebf61a93c6d6bd1f519",
+    "run_id": "21317508407",
+    "url": "reports/f3716215c835f19addb07ebf61a93c6d6bd1f519/run-21317508407/",
+    "timestamp": "2026-01-24T15:41:50Z",
+    "human_timestamp": "Jan 24, 2026 15:41 UTC",
+    "branch": "main",
+    "message": "Refactor duration display logic in Cypress workflow",
+    "author": "benwake1",
+    "status": {
+      "passes": 1,
+      "failures": 0,
+      "pending": 0,
+      "duration": 77
+    },
+    "failures": []
+  },
+  {
     "sha": "ccf8cec609fe2445f758202f6b1bca4ebdc05b45",
     "run_id": "21317275286",
     "run_attempt": "1",
@@ -69,10 +86,5 @@
     "run_id": "21316238807",
     "url": "/reports/ce19c2c766734142459d50b1d165d56130324ac4/run-1/",
     "timestamp": "2026-01-24T14:02:15Z"
-  },
-  {
-    "sha": "ce19c2c766734142459d50b1d165d56130324ac4",
-    "url": "reports/ce19c2c766734142459d50b1d165d56130324ac4-1769263291/",
-    "timestamp": "2026-01-24T14:01:31Z"
   }
 ]
