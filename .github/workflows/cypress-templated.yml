@@ -157,43 +157,33 @@ jobs:
 
           echo "$UPDATED" > "$HISTORY_FILE"
 
-          DASHBOARD_ITEMS=$(jq -r '
-            .[] |
-            . as $r |
-            $r.status as $s |
-            (if $s.failures > 0 then "fail" else "pass" end) as $cls |
-            "<li>" +
-              "<a href=\"'"$BASE_URL"'"+$r.url+"\">" +
-                $r.sha + " (run " + $r.run_id + ")" +
-              "</a> " +
-              "<span class=\"" + $cls + "\">" +
-                ($s.passes|tostring) + " ✅ / " +
-                ($s.failures|tostring) + " ❌" +
-              "</span>" +
-              "<div class=\"meta\">" +
-                $r.message + " — " + $r.author +
-                " · " + $r.branch +
-                " · " + (if $s.duration then ($s.duration / 1000 | floor | tostring) + "s" else "—" end) +
-                " · " + $r.human_timestamp +
-              "</div>" +
-              (if $r.artifact.present then
-                "<a class=\"artifact-btn\" href=\"" + $r.artifact.url + "\" target=\"_blank\">📦 Artifacts</a>" +
-                "<div class=\"artifact-meta\">" +
-                  "📦 " + ($r.artifact.size_mb|tostring) + " MB" +
-                  " · ⏳ expires " + ($r.artifact.expires_at | split(\"T\")[0]) +
-                "</div>" +
-                "<details><summary>🖼️ Screenshots</summary>" +
-                  "<a href=\"" + $r.artifact.url + "\" target=\"_blank\">View screenshots in artifacts</a>" +
-                "</details>"
-              else
-                "<div class=\"artifact-none\">✅ No artifacts (clean run)</div>"
-              end) +
-              (if ($r.failures|length) > 0 then
-                "<details><summary>❌ Failed tests</summary><ul>" +
-                ($r.failures | map("<li>" + . + "</li>") | join("")) +
-                "</ul></details>"
-              else "" end) +
-            "</li>"
+          DASHBOARD_ITEMS=$(jq -r --arg base_url "$BASE_URL" '
+          .[] |
+          . as $r |
+          $r.status as $s |
+          (if $s.failures > 0 then "fail" else "pass" end) as $cls |
+          "<li>" +
+          "<a href=\"" + $base_url + $r.url + "\">" + $r.sha + " (run " + $r.run_id + ")</a> " +
+          "<span class=\"" + $cls + "\">" + ($s.passes|tostring) + " ✅ / " + ($s.failures|tostring) + " ❌</span>" +
+          "<div class=\"meta\">" + $r.message + " — " + $r.author + " · " + $r.branch + " · " +
+          (if $s.duration then ($s.duration / 1000 | floor | tostring) + "s" else "—" end) +
+          " · " + $r.human_timestamp +
+          "</div>" +
+          (if $r.artifact.present then
+          "<a class=\"artifact-btn\" href=\"" + $r.artifact.url + "\" target=\"_blank\">📦 Artifacts</a>" +
+          "<div class=\"artifact-meta\">📦 " + ($r.artifact.size_mb|tostring) + " MB" +
+          (if $r.artifact.expires_at != null then " · ⏳ expires " + ($r.artifact.expires_at | split("T")[0]) else "" end) +
+          "</div>" +
+          "<details><summary>🖼️ Screenshots</summary>" +
+          "<a href=\"" + $r.artifact.url + "\" target=\"_blank\">View screenshots in artifacts</a>" +
+          "</details>"
+          else
+          "<div class=\"artifact-none\">✅ No artifacts (clean run)</div>"
+          end) +
+          (if ($r.failures|length) > 0 then
+          "<details><summary>❌ Failed tests</summary><ul>" + ($r.failures | map("<li>" + . + "</li>") | join("")) + "</ul></details>"
+          else "" end) +
+          "</li>"
           ' "$HISTORY_FILE")
 
           awk -v items="$DASHBOARD_ITEMS" '
