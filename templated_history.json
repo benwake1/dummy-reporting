@@ -1,0 +1,20 @@
+[
+  {
+    "sha": "94686e3a0b23eb25337d3ec89f605758d15b9b8c",
+    "run_id": "21319608668",
+    "url": "reports/94686e3a0b23eb25337d3ec89f605758d15b9b8c/run-21319608668/",
+    "timestamp": "2026-01-24T18:28:48Z",
+    "human_timestamp": "Jan 24, 2026 18:28 UTC",
+    "branch": "main",
+    "message": "Correct path to cypress-dashboard template",
+    "author": "benwake1",
+    "status": {
+      "passes": 1,
+      "failures": 0,
+      "pending": 0,
+      "duration": 95
+    },
+    "failures": [],
+    "screenshots": []
+  }
+]
