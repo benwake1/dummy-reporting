@@ -153,6 +153,8 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: gh-pages
           force_orphan: false
+          keep_files: true
+
 
       - name: Comment PR with report link
         if: github.event_name == 'pull_request'
