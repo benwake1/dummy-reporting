@@ -13,7 +13,6 @@ permissions:
 jobs:
   test-and-publish:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -34,12 +33,8 @@ jobs:
         run: npx mochawesome-merge mochawesome-report/*.json > mochawesome-report/merged.json
 
       - name: Generate HTML report
-        run: |
-          npx marge mochawesome-report/merged.json \
-            --reportDir mochawesome-report/html \
-            --reportFilename index
+        run: npx marge mochawesome-report/merged.json --reportDir mochawesome-report/html --reportFilename index
 
-      # Checkout gh-pages
       - name: Checkout gh-pages
         uses: actions/checkout@v4
         with:
@@ -72,34 +67,22 @@ jobs:
           if [ -d cypress/screenshots ]; then
             mkdir -p "gh-pages/$REPORT_PATH/screenshots"
             cp -r cypress/screenshots/* "gh-pages/$REPORT_PATH/screenshots"
-
-            SCREENSHOTS="$(find "gh-pages/$REPORT_PATH/screenshots" -type f \
-              | sed "s|gh-pages/||" \
-              | jq -R . | jq -s .)"
+            SCREENSHOTS=$(find "gh-pages/$REPORT_PATH/screenshots" -type f | sed "s|gh-pages/||" | jq -R . | jq -s .)
           fi
 
           # Failed tests
-          FAILURES="$(jq '
-            [.results[].suites[].tests[]?
-              | select(.fail)
-              | .title]
-          ' mochawesome-report/merged.json)"
+          FAILURES=$(jq '[.results[].suites[].tests[]? | select(.fail) | .title]' mochawesome-report/merged.json)
 
-          STATUS="$(jq '.stats | {
-            passes,
-            failures,
-            pending,
-            duration
-          }' mochawesome-report/merged.json)"
+          STATUS=$(jq '.stats | { passes, failures, pending, duration }' mochawesome-report/merged.json)
 
-          MSG="$(git log -1 --pretty=%s)"
-          AUTHOR="$(git log -1 --pretty=%an)"
+          MSG=$(git log -1 --pretty=%s)
+          AUTHOR=$(git log -1 --pretty=%an)
           BRANCH="${GITHUB_REF#refs/heads/}"
 
           HISTORY_FILE="gh-pages/history.json"
           [ -f "$HISTORY_FILE" ] || echo "[]" > "$HISTORY_FILE"
 
-          UPDATED="$(jq \
+          UPDATED=$(jq \
             --arg sha "$SHA" \
             --arg run_id "$RUN_ID" \
             --arg url "$PAGE_URL" \
@@ -111,8 +94,7 @@ jobs:
             --argjson status "$STATUS" \
             --argjson failures "$FAILURES" \
             --argjson screenshots "$SCREENSHOTS" \
-            '
-            . += [{
+            '. += [{
               sha: $sha,
               run_id: $run_id,
               url: $url,
@@ -124,84 +106,65 @@ jobs:
               status: $status,
               failures: $failures,
               screenshots: $screenshots
-            }]
-            | sort_by(.timestamp)
-            | reverse
-            | .[:10]
-            ' "$HISTORY_FILE")"
+            }] | sort_by(.timestamp) | reverse | .[:10]' "$HISTORY_FILE")
 
           echo "$UPDATED" > "$HISTORY_FILE"
 
-          # Cleanup old reports
-          jq -r '.[].url' "$HISTORY_FILE" | sed "s|/$||" > /tmp/keep.txt
-          if [ -d gh-pages/reports ]; then
-            for d in gh-pages/reports/*/*; do
-              p="${d#gh-pages/}"
-              if ! grep -q "$p" /tmp/keep.txt; then
-                rm -rf "$d"
-              fi
-            done
-          fi
-
           # Build dashboard
           cat > gh-pages/history.html <<'HTML'
-          <!DOCTYPE html>
-          <html>
-          <head>
+            <!DOCTYPE html>
+            <html>
+            <head>
             <meta charset="UTF-8">
             <title>Cypress CI Dashboard</title>
             <style>
-              body { font-family: system-ui; background:#0f172a; color:#e5e7eb; padding:2rem; }
-              li { background:#020617; margin-bottom:1rem; padding:1rem; border-radius:8px; }
-              a { color:#38bdf8; font-weight:600; text-decoration:none; }
-              .meta { font-size:.85rem; opacity:.7; }
-              .pass { color:#22c55e; font-weight:bold; }
-              .fail { color:#ef4444; font-weight:bold; }
-              img { max-width:160px; border-radius:6px; margin:.25rem; }
+            body { font-family: system-ui; background:#0f172a; color:#e5e7eb; padding:2rem; }
+            li { background:#020617; margin-bottom:1rem; padding:1rem; border-radius:8px; }
+            a { color:#38bdf8; font-weight:600; text-decoration:none; }
+            .meta { font-size:.85rem; opacity:.7; }
+            .pass { color:#22c55e; font-weight:bold; }
+            .fail { color:#ef4444; font-weight:bold; }
+            img { max-width:160px; border-radius:6px; margin:.25rem; }
             </style>
-          </head>
-          <body>
+            </head>
+            <body>
             <h1>🧪 Cypress CI Dashboard</h1>
             <ul>
-          HTML
-
-          jq -r "$HISTORY_FILE" <<'JQ'
-          .[] |
-          . as $r |
-          $r.status as $s |
-          (if $s.failures > 0 then "fail" else "pass" end) as $cls |
-          "<li>" +
+            HTML
+            
+                      jq -r "$HISTORY_FILE" <<'JQ' >> gh-pages/history.html
+            .[] |
+            . as $r |
+            $r.status as $s |
+            (if $s.failures > 0 then "fail" else "pass" end) as $cls |
+            "<li>" +
             "<a href=\"" + $r.url + "\">" + $r.sha + " (run " + $r.run_id + ")</a> " +
             "<span class=\"" + $cls + "\">" +
-              ($s.passes|tostring) + " ✅ / " + ($s.failures|tostring) + " ❌</span>" +
+            ($s.passes|tostring) + " ✅ / " + ($s.failures|tostring) + " ❌</span>" +
             "<div class=\"meta\">" +
-              $r.message + " — " + $r.author +
-              " · " + $r.branch +
-              " · " + (($s.duration / 1000 | floor)|tostring) + "s" +
-              " · " + $r.human_timestamp +
+            $r.message + " — " + $r.author +
+            " · " + $r.branch +
+            " · " + (($s.duration / 1000 | floor)|tostring) + "s" +
+            " · " + $r.human_timestamp +
             "</div>" +
-          
             (if ($r.failures|length) > 0 then
-              "<details><summary>❌ Failed tests</summary><ul>" +
-              ($r.failures | map("<li>" + . + "</li>") | join("")) +
-              "</ul></details>"
+            "<details><summary>❌ Failed tests</summary><ul>" +
+            ($r.failures | map("<li>" + . + "</li>") | join("")) +
+            "</ul></details>"
             else "" end) +
-          
             (if ($r.screenshots|length) > 0 then
-              "<details><summary>🖼️ Screenshots</summary>" +
-              ($r.screenshots | map("<img src=\"" + . + "\">") | join("")) +
-              "</details>"
+            "<details><summary>🖼️ Screenshots</summary>" +
+            ($r.screenshots | map("<img src=\"" + . + "\">") | join("")) +
+            "</details>"
             else "" end) +
-          
-          "</li>"
-          JQ
-
-
-          cat >> gh-pages/history.html <<'HTML'
+            "</li>"
+            JQ
+            
+                      cat >> gh-pages/history.html <<'HTML'
             </ul>
-          </body>
-          </html>
-          HTML
+            </body>
+            </html>
+            HTML
 
           echo '<meta http-equiv="refresh" content="0; url=history.html">' > gh-pages/index.html
 
