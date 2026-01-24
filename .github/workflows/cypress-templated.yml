@@ -169,10 +169,10 @@ jobs:
             .[] |
             . as $r |
             $r.status as $s |
-            (if $s.failures > 0 then "fail" else "pass" end) as $cls |
             "<li>" +
               "<a href=\"" + $base_url + $r.url + "\">" + $r.sha + " (run " + $r.run_id + ")</a> " +
-              "<span class=\"" + $cls + "\">" + ($s.passes|tostring) + " ✅ / " + ($s.failures|tostring) + " ❌</span>" +
+              "<span class=\"pass\">" + ($s.passes|tostring) + " ✅</span> / " +
+              "<span class=\"fail\">" + ($s.failures|tostring) + " ❌</span>" +
               "<div class=\"meta\">" + $r.message + " — " + $r.author + " · " + $r.branch + " · " +
                 (if $s.duration then ($s.duration / 1000 | floor | tostring) + "s" else "—" end) +
                 " · " + $r.human_timestamp +
@@ -180,7 +180,7 @@ jobs:
               (if ($r.failures | length) > 0 and $r.artifact.present then
                  "<a class=\"artifact-btn\" href=\"" + $r.artifact.url + "\" target=\"_blank\">📦 Artifacts</a>" +
                  "<div class=\"artifact-meta\">📦 " + ($r.artifact.size_mb|tostring) + " MB" +
-                 (if $r.artifact.expires_at != null then " · ⏳ expires " + ($r.artifact.expires_at | split("T")[0]) else "" end) +
+                 (if $r.artifact.expires_at != null then " · ⏳ expires " + ($r.artifact.expires_at | split(\"T\")[0]) else "" end) +
                  "</div>" +
                  "<details><summary>🖼️ Screenshots</summary>" +
                    "<a href=\"" + $r.artifact.url + "\" target=\"_blank\">View screenshots in artifact zip</a>" +
