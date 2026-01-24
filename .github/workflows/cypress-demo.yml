@@ -13,6 +13,7 @@ permissions:
 jobs:
   test-and-publish:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -67,7 +68,10 @@ jobs:
           if [ -d cypress/screenshots ]; then
             mkdir -p "gh-pages/$REPORT_PATH/screenshots"
             cp -r cypress/screenshots/* "gh-pages/$REPORT_PATH/screenshots"
-            SCREENSHOTS=$(find "gh-pages/$REPORT_PATH/screenshots" -type f | sed "s|gh-pages/||" | jq -R . | jq -s .)
+
+            SCREENSHOTS=$(find "gh-pages/$REPORT_PATH/screenshots" -type f \
+              | sed "s|gh-pages/||" \
+              | jq -R . | jq -s .)
           fi
 
           # Failed tests
@@ -110,63 +114,73 @@ jobs:
 
           echo "$UPDATED" > "$HISTORY_FILE"
 
-          # Build dashboard
-          cat > gh-pages/history.html <<'HTML'
-            <!DOCTYPE html>
-            <html>
-            <head>
-            <meta charset="UTF-8">
-            <title>Cypress CI Dashboard</title>
-            <style>
-            body { font-family: system-ui; background:#0f172a; color:#e5e7eb; padding:2rem; }
-            li { background:#020617; margin-bottom:1rem; padding:1rem; border-radius:8px; }
-            a { color:#38bdf8; font-weight:600; text-decoration:none; }
-            .meta { font-size:.85rem; opacity:.7; }
-            .pass { color:#22c55e; font-weight:bold; }
-            .fail { color:#ef4444; font-weight:bold; }
-            img { max-width:160px; border-radius:6px; margin:.25rem; }
-            </style>
-            </head>
-            <body>
-            <h1>🧪 Cypress CI Dashboard</h1>
-            <ul>
-            HTML
-            
-                      jq -r "$HISTORY_FILE" <<'JQ' >> gh-pages/history.html
-            .[] |
-            . as $r |
-            $r.status as $s |
-            (if $s.failures > 0 then "fail" else "pass" end) as $cls |
-            "<li>" +
-            "<a href=\"" + $r.url + "\">" + $r.sha + " (run " + $r.run_id + ")</a> " +
-            "<span class=\"" + $cls + "\">" +
-            ($s.passes|tostring) + " ✅ / " + ($s.failures|tostring) + " ❌</span>" +
-            "<div class=\"meta\">" +
-            $r.message + " — " + $r.author +
-            " · " + $r.branch +
-            " · " + (($s.duration / 1000 | floor)|tostring) + "s" +
-            " · " + $r.human_timestamp +
-            "</div>" +
-            (if ($r.failures|length) > 0 then
-            "<details><summary>❌ Failed tests</summary><ul>" +
-            ($r.failures | map("<li>" + . + "</li>") | join("")) +
-            "</ul></details>"
-            else "" end) +
-            (if ($r.screenshots|length) > 0 then
-            "<details><summary>🖼️ Screenshots</summary>" +
-            ($r.screenshots | map("<img src=\"" + . + "\">") | join("")) +
-            "</details>"
-            else "" end) +
-            "</li>"
-            JQ
-            
-                      cat >> gh-pages/history.html <<'HTML'
-            </ul>
-            </body>
-            </html>
-            HTML
+          # Cleanup old reports
+          jq -r '.[].url' "$HISTORY_FILE" | sed "s|/$||" > /tmp/keep.txt
+          if [ -d gh-pages/reports ]; then
+            for d in gh-pages/reports/*/*; do
+              p="${d#gh-pages/}"
+              if ! grep -q "$p" /tmp/keep.txt; then
+                rm -rf "$d"
+              fi
+            done
+          fi
 
-          echo '<meta http-equiv="refresh" content="0; url=history.html">' > gh-pages/index.html
+          # Build dashboard as index.html
+          cat > gh-pages/index.html <<'HTML'
+          <!DOCTYPE html>
+          <html>
+          <head>
+          <meta charset="UTF-8">
+          <title>Cypress CI Dashboard</title>
+          <style>
+          body { font-family: system-ui; background:#0f172a; color:#e5e7eb; padding:2rem; }
+          li { background:#020617; margin-bottom:1rem; padding:1rem; border-radius:8px; }
+          a { color:#38bdf8; font-weight:600; text-decoration:none; }
+          .meta { font-size:.85rem; opacity:.7; }
+          .pass { color:#22c55e; font-weight:bold; }
+          .fail { color:#ef4444; font-weight:bold; }
+          img { max-width:160px; border-radius:6px; margin:.25rem; }
+          details { margin-top:.5rem; }
+          </style>
+          </head>
+          <body>
+          <h1>🧪 Cypress CI Dashboard</h1>
+          <ul>
+          HTML
+          
+                    jq -r "$HISTORY_FILE" >> gh-pages/index.html <<'JQ'
+          .[] |
+          . as $r |
+          $r.status as $s |
+          (if $s.failures > 0 then "fail" else "pass" end) as $cls |
+          "<li>" +
+          "<a href=\"" + $r.url + "\">" + $r.sha + " (run " + $r.run_id + ")</a> " +
+          "<span class=\"" + $cls + "\">" +
+          ($s.passes|tostring) + " ✅ / " + ($s.failures|tostring) + " ❌</span>" +
+          "<div class=\"meta\">" +
+          $r.message + " — " + $r.author +
+          " · " + $r.branch +
+          " · " + (($s.duration / 1000 | floor)|tostring) + "s" +
+          " · " + $r.human_timestamp +
+          "</div>" +
+          (if ($r.failures|length) > 0 then
+          "<details><summary>❌ Failed tests</summary><ul>" +
+          ($r.failures | map("<li>" + . + "</li>") | join("")) +
+          "</ul></details>"
+          else "" end) +
+          (if ($r.screenshots|length) > 0 then
+          "<details><summary>🖼️ Screenshots</summary>" +
+          ($r.screenshots | map("<img src=\"" + . + "\">") | join("")) +
+          "</details>"
+          else "" end) +
+          "</li>"
+          JQ
+
+          cat >> gh-pages/index.html <<'HTML'
+          </ul>
+          </body>
+          </html>
+          HTML
 
       - name: Deploy Pages
         uses: peaceiris/actions-gh-pages@v3
