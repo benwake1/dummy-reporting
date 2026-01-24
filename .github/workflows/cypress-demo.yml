@@ -133,11 +133,20 @@ jobs:
           echo "$UPDATED_HISTORY" | jq -r '
             group_by(.sha)[] |
             . as $group |
-            $latest = $group[0] |
-            $status = $latest.status |
-            $status_class = if $status.failures > 0 then "fail" elif $status.pending > 0 then "pending" else "pass" end |
+            $group[0] as $latest |
+            $latest.status as $status |
+            (if $status.failures > 0 then "fail" elif $status.pending > 0 then "pending" else "pass" end) as $status_class |
             "<li><a href=\"" + $latest.url + "\">" + $latest.sha + " (latest run)</a> <span class=\"" + $status_class + "\">" + ($status.passes|tostring) + " ✅ / " + ($status.failures|tostring) + " ❌</span>" +
-            (if ($group|length) > 1 then "<details><summary>Reruns</summary><ul>" + ($group[1:] | map("<li><a href=\"" + .url + "\">Run " + .run_id + "</a> <span>Pass: " + (.status.passes|tostring) + " Fail: " + (.status.failures|tostring) + " Pending: " + (.status.pending|tostring) + " — " + .human_timestamp + "</span></li>") | join("") ) + "</ul></details>" else "" end) +
+            (if ($group|length) > 1 then
+                "<details><summary>Reruns</summary><ul>" +
+                ($group[1:] | map(
+                    "<li><a href=\"" + .url + "\">Run " + .run_id + "</a> <span>Pass: " + (.status.passes|tostring) +
+                    " Fail: " + (.status.failures|tostring) +
+                    " Pending: " + (.status.pending|tostring) +
+                    " — " + .human_timestamp + "</span></li>"
+                ) | join("")) +
+                "</ul></details>"
+             else "" end) +
             "</li>"
           ' >> gh-pages/history.html
 
