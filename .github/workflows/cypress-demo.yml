@@ -50,10 +50,9 @@ jobs:
         run: |
           set -e
 
-          REPO="${{ github.repository }}"
           SHA="${{ github.sha }}"
           RUN_ID="${{ github.run_id }}"
-
+          BRANCH="${GITHUB_REF#refs/heads/}"
           REPORT_PATH="reports/$SHA/run-$RUN_ID"
           PAGE_URL="$REPORT_PATH/"
 
@@ -68,20 +67,15 @@ jobs:
           if [ -d cypress/screenshots ]; then
             mkdir -p "gh-pages/$REPORT_PATH/screenshots"
             cp -r cypress/screenshots/* "gh-pages/$REPORT_PATH/screenshots"
-
-            SCREENSHOTS=$(find "gh-pages/$REPORT_PATH/screenshots" -type f \
-              | sed "s|gh-pages/||" \
-              | jq -R . | jq -s .)
+            SCREENSHOTS=$(find "gh-pages/$REPORT_PATH/screenshots" -type f | sed "s|gh-pages/||" | jq -R . | jq -s .)
           fi
 
           # Failed tests
           FAILURES=$(jq '[.results[].suites[].tests[]? | select(.fail) | .title]' mochawesome-report/merged.json)
 
           STATUS=$(jq '.stats | { passes, failures, pending, duration }' mochawesome-report/merged.json)
-
           MSG=$(git log -1 --pretty=%s)
           AUTHOR=$(git log -1 --pretty=%an)
-          BRANCH="${GITHUB_REF#refs/heads/}"
 
           HISTORY_FILE="gh-pages/history.json"
           [ -f "$HISTORY_FILE" ] || echo "[]" > "$HISTORY_FILE"
@@ -125,7 +119,7 @@ jobs:
             done
           fi
 
-          # Build dashboard as index.html
+          # Build dashboard HTML
           cat > gh-pages/index.html <<'HTML'
           <!DOCTYPE html>
           <html>
@@ -148,35 +142,35 @@ jobs:
           <ul>
           HTML
           
-          jq -r '
-          .[] |
-          . as $r |
-          $r.status as $s |
-          (if $s.failures > 0 then "fail" else "pass" end) as $cls |
-          "<li>" +
-          "<a href=\"" + $r.url + "\">" + $r.sha + " (run " + $r.run_id + ")</a> " +
-          "<span class=\"" + $cls + "\">" +
-          ($s.passes|tostring) + " ✅ / " + ($s.failures|tostring) + " ❌</span>" +
-          "<div class=\"meta\">" +
-          $r.message + " — " + $r.author +
-          " · " + $r.branch +
-          " · " + (if $s.duration then ($s.duration / 1000 | floor | tostring) + "s" else "—" end)
-          " · " + $r.human_timestamp +
-          "</div>" +
-          (if ($r.failures|length) > 0 then
-            "<details><summary>❌ Failed tests</summary><ul>" +
-            ($r.failures | map("<li>" + . + "</li>") | join("")) +
-            "</ul></details>"
-          else "" end) +
-          (if ($r.screenshots|length) > 0 then
-            "<details><summary>🖼️ Screenshots</summary>" +
-            ($r.screenshots | map("<img src=\"" + . + "\">") | join("")) +
-            "</details>"
-          else "" end) +
-          "</li>"
-          ' "$HISTORY_FILE" >> gh-pages/index.html
-
-          cat >> gh-pages/index.html <<'HTML'
+                    jq -r '
+                    .[] |
+                    . as $r |
+                    $r.status as $s |
+                    (if $s.failures > 0 then "fail" else "pass" end) as $cls |
+                    "<li>" +
+                    "<a href=\"" + $r.url + "\">" + $r.sha + " (run " + $r.run_id + ")</a> " +
+                    "<span class=\"" + $cls + "\">" +
+                    ($s.passes|tostring) + " ✅ / " + ($s.failures|tostring) + " ❌</span>" +
+                    "<div class=\"meta\">" +
+                    $r.message + " — " + $r.author +
+                    " · " + $r.branch +
+                    " · " + (if $s.duration then ($s.duration / 1000 | floor | tostring) + "s" else "—" end) +
+                    " · " + $r.human_timestamp +
+                    "</div>" +
+                    (if ($r.failures|length) > 0 then
+                      "<details><summary>❌ Failed tests</summary><ul>" +
+                      ($r.failures | map("<li>" + . + "</li>") | join("")) +
+                      "</ul></details>"
+                    else "" end) +
+                    (if ($r.screenshots|length) > 0 then
+                      "<details><summary>🖼️ Screenshots</summary>" +
+                      ($r.screenshots | map("<img src=\"" + . + "\">") | join("")) +
+                      "</details>"
+                    else "" end) +
+                    "</li>"
+                    ' "$HISTORY_FILE" >> gh-pages/index.html
+          
+                    cat >> gh-pages/index.html <<'HTML'
           </ul>
           </body>
           </html>
