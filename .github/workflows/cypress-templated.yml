@@ -15,13 +15,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout main branch for dependencies
-      - name: Checkout main for dependencies
+      # 1️⃣ Checkout main branch
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # 2️⃣ Setup Node and npm cache
+      # 2️⃣ Setup Node
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -32,7 +32,7 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      # 4️⃣ Run Cypress tests
+      # 4️⃣ Run Cypress
       - name: Run Cypress
         run: npm run test:ci
 
@@ -44,19 +44,19 @@ jobs:
       - name: Generate HTML report
         run: npx marge mochawesome-report/merged.json --reportDir mochawesome-report/html --reportFilename index
 
-      # 📦 Upload Cypress artifacts
+      # 7️⃣ Upload artifacts (optional)
       - name: Upload Cypress Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cypress-artifacts-${{ github.run_id }}
           retention-days: 14
+          if-no-files-found: ignore
           path: |
             mochawesome-report/html
             cypress/screenshots
-          if-no-files-found: ignore
 
-      # 7️⃣ Checkout gh-pages branch for publishing
+      # 8️⃣ Checkout gh-pages
       - name: Checkout gh-pages
         uses: actions/checkout@v4
         with:
@@ -64,18 +64,21 @@ jobs:
           path: gh-pages
           fetch-depth: 0
 
-      # 8️⃣ Checkout main branch again for template access
-      - name: Checkout main branch for template
+      # 9️⃣ Checkout main again (template access)
+      - name: Checkout main for template
         uses: actions/checkout@v4
         with:
           path: main-checkout
           fetch-depth: 0
 
-      # 9️⃣ Install jq
+      # 🔟 Install jq
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
+      # 1️⃣1️⃣ Prepare Templated Pages
       - name: Prepare Templated Pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
 
@@ -95,37 +98,36 @@ jobs:
           mkdir -p "gh-pages/$REPORT_PATH"
           cp -r mochawesome-report/html/* "gh-pages/$REPORT_PATH"
 
-          # 🔎 Fetch artifact metadata from GitHub API
+          # -------------------------------
+          # Artifact metadata (optional)
+          # -------------------------------
+          ARTIFACT_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}#artifacts"
+
           ARTIFACT_JSON=$(curl -s \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts")
 
-          ARTIFACT=$(echo "$ARTIFACT_JSON" | jq '.artifacts[0]')
-          ARTIFACT_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}#artifacts"
-          
-          
           ARTIFACT_PRESENT=$(echo "$ARTIFACT_JSON" | jq '(.artifacts | length) > 0')
-          
-          
+
           ARTIFACT_SIZE_MB=$(echo "$ARTIFACT_JSON" | jq '
-          if (.artifacts | length) > 0
-          then (.artifacts[0].size_in_bytes / 1024 / 1024 | floor)
-          else null
-          end
+            if (.artifacts | length) > 0
+            then (.artifacts[0].size_in_bytes / 1024 / 1024 | floor)
+            else null
+            end
           ')
-          
-          
+
           ARTIFACT_EXPIRES=$(echo "$ARTIFACT_JSON" | jq -r '
-          if (.artifacts | length) > 0
-          then .artifacts[0].expires_at
-          else null
-          end
+            if (.artifacts | length) > 0
+            then .artifacts[0].expires_at
+            else null
+            end
           ')
 
-          # Failed tests
+          # -------------------------------
+          # Test metadata
+          # -------------------------------
           FAILURES=$(jq '[.results[].suites[].tests[]? | select(.fail) | .title]' mochawesome-report/merged.json)
-
           STATUS=$(jq '.stats | { passes, failures, pending, duration }' mochawesome-report/merged.json)
 
           MSG=$(git log -1 --pretty=%s)
@@ -145,11 +147,11 @@ jobs:
             --arg msg "$MSG" \
             --arg author "$AUTHOR" \
             --arg artifact_url "$ARTIFACT_URL" \
-            --arg expires "$ARTIFACT_EXPIRES" \
-            --arg size "$ARTIFACT_SIZE_MB" \
+            --argjson artifact_present "$ARTIFACT_PRESENT" \
+            --argjson artifact_size "$ARTIFACT_SIZE_MB" \
+            --arg artifact_expires "$ARTIFACT_EXPIRES" \
             --argjson status "$STATUS" \
             --argjson failures "$FAILURES" \
-            --argjson artifact_present "$ARTIFACT_PRESENT" \
             '. += [{
               sha: $sha,
               run_id: $run_id,
@@ -164,8 +166,8 @@ jobs:
               artifact: {
                 present: $artifact_present,
                 url: $artifact_url,
-                size_mb: $size,
-                expires_at: $expires
+                size_mb: $artifact_size,
+                expires_at: $artifact_expires
               }
             }] | sort_by(.timestamp) | reverse | .[:10]' "$HISTORY_FILE")
 
@@ -177,32 +179,36 @@ jobs:
             $r.status as $s |
             (if $s.failures > 0 then "fail" else "pass" end) as $cls |
             "<li>" +
-              "<a href=\"'"$BASE_URL"'"+$r.url+"\">" + $r.sha + " (run " + $r.run_id + ")</a> " +
+              "<a href=\"'"$BASE_URL"'"+$r.url+"\">" +
+                $r.sha + " (run " + $r.run_id + ")" +
+              "</a> " +
               "<span class=\"" + $cls + "\">" +
-                ($s.passes|tostring) + " ✅ / " + ($s.failures|tostring) + " ❌</span>" +
+                ($s.passes|tostring) + " ✅ / " +
+                ($s.failures|tostring) + " ❌" +
+              "</span>" +
               "<div class=\"meta\">" +
                 $r.message + " — " + $r.author +
                 " · " + $r.branch +
                 " · " + (if $s.duration then ($s.duration / 1000 | floor | tostring) + "s" else "—" end) +
                 " · " + $r.human_timestamp +
               "</div>" +
+              (if $r.artifact.present then
+                "<a class=\"artifact-btn\" href=\"" + $r.artifact.url + "\" target=\"_blank\">📦 Artifacts</a>" +
+                "<div class=\"artifact-meta\">" +
+                  "📦 " + ($r.artifact.size_mb|tostring) + " MB" +
+                  " · ⏳ expires " + ($r.artifact.expires_at | sub(\"T.*\"; \"\")) +
+                "</div>" +
+                "<details><summary>🖼️ Screenshots</summary>" +
+                  "<a href=\"" + $r.artifact.url + "\" target=\"_blank\">View screenshots in artifacts</a>" +
+                "</details>"
+              else
+                "<div class=\"artifact-none\">✅ No artifacts (clean run)</div>"
+              end) +
               (if ($r.failures|length) > 0 then
                 "<details><summary>❌ Failed tests</summary><ul>" +
                 ($r.failures | map("<li>" + . + "</li>") | join("")) +
                 "</ul></details>"
               else "" end) +
-              (if $r.artifact.present then
-              "<a class=\"artifact-btn\" href=\"" + $r.artifact.url + "\" target=\"_blank\">📦 Artifacts</a>" +
-              "<div class=\"artifact-meta\">" +
-              "📦 " + ($r.artifact.size_mb|tostring) + " MB" +
-              " · ⏳ expires " + ($r.artifact.expires_at | sub(\"T.*\"; \"\")) +
-              "</div>" +
-              "<details><summary>🖼️ Screenshots</summary>" +
-              "<a href=\"" + $r.artifact.url + "\" target=\"_blank\">View screenshots in artifacts</a>" +
-              "</details>"
-              else
-              "<span class=\"artifact-none\">✅ No artifacts (clean run)</span>"
-              end)
             "</li>"
           ' "$HISTORY_FILE")
 
@@ -214,9 +220,9 @@ jobs:
               }
             }
           ' main-checkout/.cypress-dashbord/template.html > gh-pages/templated_index.html
-      
-      # 1️⃣1️⃣ Deploy Pages (templated)
-      - name: Deploy Pages (templated)
+
+      # 1️⃣2️⃣ Deploy Pages
+      - name: Deploy Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
