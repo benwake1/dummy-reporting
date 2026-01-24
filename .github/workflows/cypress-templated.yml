@@ -15,14 +15,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout main branch (for template)
-      - name: Checkout main branch
+      # 1️⃣ Checkout main branch for dependencies
+      - name: Checkout main for dependencies
         uses: actions/checkout@v4
         with:
-          path: main-checkout
           fetch-depth: 0
 
-      # 2️⃣ Setup Node
+      # 2️⃣ Setup Node and npm cache
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -45,7 +44,7 @@ jobs:
       - name: Generate HTML report
         run: npx marge mochawesome-report/merged.json --reportDir mochawesome-report/html --reportFilename index
 
-      # 7️⃣ Checkout gh-pages branch
+      # 7️⃣ Checkout gh-pages branch for publishing
       - name: Checkout gh-pages
         uses: actions/checkout@v4
         with:
@@ -53,11 +52,18 @@ jobs:
           path: gh-pages
           fetch-depth: 0
 
-      # 8️⃣ Install jq
+      # 8️⃣ Checkout main branch again for template access
+      - name: Checkout main branch for template
+        uses: actions/checkout@v4
+        with:
+          path: main-checkout
+          fetch-depth: 0
+
+      # 9️⃣ Install jq
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      # 9️⃣ Prepare templated pages
+      # 🔟 Prepare templated pages
       - name: Prepare Templated Pages
         run: |
           set -e
@@ -156,7 +162,7 @@ jobs:
           # Inject into template from main-checkout
           sed "s|<!-- DASHBOARD_ITEMS -->|$DASHBOARD_ITEMS|" main-checkout/.cypress-dashboard/template.html > gh-pages/templated_index.html
 
-      # 🔟 Deploy Pages
+      # 1️⃣1️⃣ Deploy Pages (templated)
       - name: Deploy Pages (templated)
         uses: peaceiris/actions-gh-pages@v3
         with:
