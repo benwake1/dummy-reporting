@@ -197,14 +197,20 @@ jobs:
             "</li>"
           ' "$HISTORY_FILE")
           
+          TEMPLATE_FILE="main-checkout/.cypress-dashbord/template.html"
+          OUTPUT_FILE="gh-pages/templated_index.html"
+          
+          # Inject dashboard items at the placeholder comment
           awk -v items="$DASHBOARD_ITEMS" '
+            BEGIN {injection_done=0}
             {
               print
-              if ($0 ~ /<ul>/) {
+              if ($0 ~ /<!-- DASHBOARD_ITEMS -->/ && !injection_done) {
                 print items
+                injection_done=1
               }
             }
-          ' main-checkout/.cypress-dashbord/template.html > gh-pages/templated_index.html
+          ' "$TEMPLATE_FILE" > "$OUTPUT_FILE"
 
       # 1️⃣2️⃣ Deploy Pages
       - name: Deploy Pages
