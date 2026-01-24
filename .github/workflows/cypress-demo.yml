@@ -1,4 +1,4 @@
-name: Cypress Demo CI
+name: Cypress Demo - With Pages
 
 on:
   push:
