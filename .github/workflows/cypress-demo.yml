@@ -142,33 +142,33 @@ jobs:
           <ul>
           HTML
           
-                    jq -r '
-                    .[] |
-                    . as $r |
-                    $r.status as $s |
-                    (if $s.failures > 0 then "fail" else "pass" end) as $cls |
-                    "<li>" +
-                    "<a href=\"" + $r.url + "\">" + $r.sha + " (run " + $r.run_id + ")</a> " +
-                    "<span class=\"" + $cls + "\">" +
-                    ($s.passes|tostring) + " ✅ / " + ($s.failures|tostring) + " ❌</span>" +
-                    "<div class=\"meta\">" +
-                    $r.message + " — " + $r.author +
-                    " · " + $r.branch +
-                    " · " + (if $s.duration then ($s.duration / 1000 | floor | tostring) + "s" else "—" end) +
-                    " · " + $r.human_timestamp +
-                    "</div>" +
-                    (if ($r.failures|length) > 0 then
-                      "<details><summary>❌ Failed tests</summary><ul>" +
-                      ($r.failures | map("<li>" + . + "</li>") | join("")) +
-                      "</ul></details>"
-                    else "" end) +
-                    (if ($r.screenshots|length) > 0 then
-                      "<details><summary>🖼️ Screenshots</summary>" +
-                      ($r.screenshots | map("<img src=\"" + . + "\">") | join("")) +
-                      "</details>"
-                    else "" end) +
-                    "</li>"
-                    ' "$HISTORY_FILE" >> gh-pages/index.html
+          jq -r '
+          .[] |
+          .r as $r |
+          $r.status as $s |
+          (if $s.failures > 0 then "fail" else "pass" end) as $cls |
+          "<li>" +
+          "<a href=\"https://'"$REPO"'.github.io/" + $r.url + "\">" + $r.sha + " (run " + $r.run_id + ")</a> " +
+          "<span class=\"" + $cls + "\">" +
+          ($s.passes|tostring) + " ✅ / " + ($s.failures|tostring) + " ❌</span>" +
+          "<div class=\"meta\">" +
+          $r.message + " — " + $r.author +
+          " · " + $r.branch +
+          " · " + (if $s.duration then ($s.duration / 1000 | floor | tostring) + "s" else "—" end) +
+          " · " + $r.human_timestamp +
+          "</div>" +
+          (if ($r.failures|length) > 0 then
+            "<details><summary>❌ Failed tests</summary><ul>" +
+            ($r.failures | map("<li>" + . + "</li>") | join("")) +
+            "</ul></details>"
+          else "" end) +
+          (if ($r.screenshots|length) > 0 then
+            "<details><summary>🖼️ Screenshots</summary>" +
+            ($r.screenshots | map("<img src=\"https://'"$REPO"'.github.io/" + . + "\">") | join("")) +
+            "</details>"
+          else "" end) +
+          "</li>"
+          ' "$HISTORY_FILE" >> gh-pages/index.html
           
                     cat >> gh-pages/index.html <<'HTML'
           </ul>
