@@ -5,9 +5,9 @@
     "passes": 1,
     "pending": 0,
     "failures": 0,
-    "start": "2026-01-24T10:49:45.434Z",
-    "end": "2026-01-24T10:49:45.509Z",
-    "duration": 75,
+    "start": "2026-01-24T11:05:22.452Z",
+    "end": "2026-01-24T11:05:22.537Z",
+    "duration": 85,
     "testsRegistered": 1,
     "passPercent": 100,
     "pendingPercent": 0,
@@ -18,7 +18,7 @@
   },
   "results": [
     {
-      "uuid": "25661056-b8ca-4a3e-81a5-1871dc5b8721",
+      "uuid": "aaf9dafd-cc2d-4929-9e0c-a222e45314b9",
       "title": "",
       "fullFile": "cypress/e2e/demo.cy.js",
       "file": "cypress/e2e/demo.cy.js",
@@ -27,7 +27,7 @@
       "tests": [],
       "suites": [
         {
-          "uuid": "faef0b5a-3dc2-4423-b046-1585b4882e52",
+          "uuid": "a8f68603-87e2-4cdc-93d2-063efac7c464",
           "title": "Dummy test",
           "fullFile": "",
           "file": "",
@@ -38,7 +38,7 @@
               "title": "always passes",
               "fullTitle": "Dummy test always passes",
               "timedOut": null,
-              "duration": 35,
+              "duration": 30,
               "state": "passed",
               "speed": "fast",
               "pass": true,
@@ -47,20 +47,20 @@
               "context": null,
               "code": "expect(true).to.equal(true);",
               "err": {},
-              "uuid": "9853130c-3bd4-4152-a457-f926150269bb",
-              "parentUUID": "faef0b5a-3dc2-4423-b046-1585b4882e52",
+              "uuid": "415f75de-8291-46c4-80c9-0758e53e3d1d",
+              "parentUUID": "a8f68603-87e2-4cdc-93d2-063efac7c464",
               "isHook": false,
               "skipped": false
             }
           ],
           "suites": [],
           "passes": [
-            "9853130c-3bd4-4152-a457-f926150269bb"
+            "415f75de-8291-46c4-80c9-0758e53e3d1d"
           ],
           "failures": [],
           "pending": [],
           "skipped": [],
-          "duration": 35,
+          "duration": 30,
           "root": false,
           "rootEmpty": false,
           "_timeout": 2000
