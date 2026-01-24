@@ -1,6 +1,24 @@
 [
   {
     "sha": "f2323d34cf06cf231d138f04c35025cf9705fb3c",
+    "run_id": "21318095452",
+    "url": "reports/f2323d34cf06cf231d138f04c35025cf9705fb3c/run-21318095452/",
+    "timestamp": "2026-01-24T16:30:00Z",
+    "human_timestamp": "Jan 24, 2026 16:30 UTC",
+    "branch": "main",
+    "message": "Refactor jq command for Cypress CI dashboard",
+    "author": "benwake1",
+    "status": {
+      "passes": 1,
+      "failures": 0,
+      "pending": 0,
+      "duration": 79
+    },
+    "failures": [],
+    "screenshots": []
+  },
+  {
+    "sha": "f2323d34cf06cf231d138f04c35025cf9705fb3c",
     "run_id": "21318074792",
     "url": "reports/f2323d34cf06cf231d138f04c35025cf9705fb3c/run-21318074792/",
     "timestamp": "2026-01-24T16:28:15Z",
@@ -112,12 +130,5 @@
     "run_id": "21316842594",
     "url": "reports/f22259fb3f675de35946c82b2d75117db05b36a0/run-1/",
     "timestamp": "2026-01-24T14:49:46Z"
-  },
-  {
-    "sha": "a84791cb0dbe6d62aaa6d5e0861c52430c893022",
-    "run": "1",
-    "run_id": "21316635432",
-    "url": "reports/reports/a84791cb0dbe6d62aaa6d5e0861c52430c893022/run-1/",
-    "timestamp": "2026-01-24T14:33:32Z"
   }
 ]
