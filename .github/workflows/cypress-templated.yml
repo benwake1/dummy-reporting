@@ -163,7 +163,7 @@ jobs:
           ' "$HISTORY_FILE")
 
           # Inject dashboard items safely
-          cat main-checkout/.cypress-dashboard/template.html > gh-pages/templated_index.html
+          cat main-checkout/.cypress-dashbord/template.html > gh-pages/templated_index.html
           echo "$DASHBOARD_ITEMS" >> gh-pages/templated_index.html
 
       # 1️⃣1️⃣ Deploy Pages (templated)
