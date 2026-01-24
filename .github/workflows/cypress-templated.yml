@@ -63,14 +63,17 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      # 🔟 Prepare Templated Pages
+      # 🔟 Prepare templated pages
       - name: Prepare Templated Pages
         run: |
           set -e
 
-          REPO="${{ github.repository }}"
-          SHA="${{ github.sha }}"
-          RUN_ID="${{ github.run_id }}"
+          OWNER="${GITHUB_REPOSITORY%%/*}"
+          REPO_NAME="${GITHUB_REPOSITORY##*/}"
+          BASE_URL="https://${OWNER}.github.io/${REPO_NAME}/"
+
+          SHA="${GITHUB_SHA}"
+          RUN_ID="${GITHUB_RUN_ID}"
           REPORT_PATH="reports/$SHA/run-$RUN_ID"
           PAGE_URL="$REPORT_PATH/"
 
@@ -137,7 +140,7 @@ jobs:
             $r.status as $s |
             (if $s.failures > 0 then "fail" else "pass" end) as $cls |
             "<li>" +
-              "<a href=\"https://'"$REPO"'.github.io/" + $r.url + "\">" + $r.sha + " (run " + $r.run_id + ")</a> " +
+              "<a href=\"'"$BASE_URL"'"+$r.url+"\">" + $r.sha + " (run " + $r.run_id + ")</a> " +
               "<span class=\"" + $cls + "\">" +
                 ($s.passes|tostring) + " ✅ / " + ($s.failures|tostring) + " ❌</span>" +
               "<div class=\"meta\">" +
@@ -153,17 +156,14 @@ jobs:
               else "" end) +
               (if ($r.screenshots|length) > 0 then
                 "<details><summary>🖼️ Screenshots</summary>" +
-                ($r.screenshots | map("<img src=\"https://'"$REPO"'.github.io/" + . + "\">") | join("")) +
+                ($r.screenshots | map("<img src=\"'"$BASE_URL"'"+.) | join("")) +
                 "</details>"
               else "" end) +
             "</li>"
           ' "$HISTORY_FILE")
 
-          # Export for template injection
-          export DASHBOARD_ITEMS
-
-          # Inject into template safely with envsubst
-          envsubst < main-checkout/.cypress-dashbord/template.html > gh-pages/templated_index.html
+          # Inject into template from main-checkout
+          sed "s|<!-- DASHBOARD_ITEMS -->|$DASHBOARD_ITEMS|" main-checkout/.cypress-dashbord/template.html > gh-pages/templated_index.html
 
       # 1️⃣1️⃣ Deploy Pages (templated)
       - name: Deploy Pages (templated)
