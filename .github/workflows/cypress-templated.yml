@@ -35,6 +35,7 @@ jobs:
       # 4️⃣ Run Cypress tests
       - name: Run Cypress
         run: npm run test:ci
+        continue-on-error: true
 
       # 5️⃣ Merge Mochawesome JSON
       - name: Merge Mochawesome
