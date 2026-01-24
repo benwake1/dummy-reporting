@@ -68,7 +68,7 @@ jobs:
         run: |
           set -e
 
-          REPORT_PATH="reports/${{ github.sha }}"
+          REPORT_PATH="reports/${{ github.sha }}/run-${{ github.run_attempt }}"
           TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
           mkdir -p "gh-pages/$REPORT_PATH"
@@ -84,7 +84,13 @@ jobs:
             --arg sha "${{ github.sha }}" \
             --arg url "/$REPORT_PATH/" \
             --arg ts "$TIMESTAMP" \
-            '. += [{"sha":$sha,"url":$url,"timestamp":$ts}]
+            '. += [{
+                    "sha": $sha,
+                    "run": "${{ github.run_attempt }}",
+                    "run_id": "${{ github.run_id }}",
+                    "url": $url,
+                    "timestamp": $ts
+                    }]
              | sort_by(.timestamp)
              | reverse
              | .[:10]')"
@@ -128,7 +134,7 @@ jobs:
           EOF
 
           echo "$UPDATED_HISTORY" | jq -r \
-            '.[] | "<li><a href=\"\(.url)\">\(.sha)</a><span>\(.timestamp)</span></li>"' \
+            '.[] | "<a href=\"\(.url)\">\(.sha) (run \(.run))</a><span>\(.timestamp)</span>"' \
             >> gh-pages/history.html
 
           cat >> gh-pages/history.html <<'EOF'
