@@ -10,10 +10,6 @@ permissions:
   contents: write
   pull-requests: write
 
-#concurrency:
-#  group: cypress-pages
-#  cancel-in-progress: true
-
 jobs:
   test-and-publish:
     runs-on: ubuntu-latest
@@ -54,12 +50,13 @@ jobs:
             cypress/screenshots
             cypress/videos
 
-      # 🔑 IMPORTANT: bring in existing Pages content
+      # Checkout gh-pages branch
       - name: Checkout gh-pages branch
         uses: actions/checkout@v4
         with:
           ref: gh-pages
           path: gh-pages
+          fetch-depth: 0
 
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
@@ -74,29 +71,35 @@ jobs:
           mkdir -p "gh-pages/$REPORT_PATH"
           cp -r mochawesome-report/html/* "gh-pages/$REPORT_PATH"
 
+          # Read existing history or initialize empty array
           if [ -f gh-pages/history.json ]; then
             HISTORY="$(cat gh-pages/history.json)"
           else
             HISTORY="[]"
           fi
 
+          # Append new run, normalize old entries, sort, keep last 10
           UPDATED_HISTORY="$(echo "$HISTORY" | jq \
             --arg sha "${{ github.sha }}" \
             --arg url "/$REPORT_PATH/" \
             --arg ts "$TIMESTAMP" \
+            --arg run "${{ github.run_attempt }}" \
+            --arg run_id "${{ github.run_id }}" \
             '. += [{
-                    "sha": $sha,
-                    "run": "${{ github.run_attempt }}",
-                    "run_id": "${{ github.run_id }}",
-                    "url": $url,
-                    "timestamp": $ts
-                    }]
+                  "sha": $sha,
+                  "run": $run,
+                  "run_id": $run_id,
+                  "url": $url,
+                  "timestamp": $ts
+                }]
+             | map(if has("id") then del(.id) else . end)
              | sort_by(.timestamp)
              | reverse
              | .[:10]')"
 
           echo "$UPDATED_HISTORY" > gh-pages/history.json
 
+          # Generate HTML
           cat > gh-pages/history.html <<'EOF'
           <!DOCTYPE html>
           <html>
@@ -133,9 +136,10 @@ jobs:
             <ul>
           EOF
 
-          echo "$UPDATED_HISTORY" | jq -r \
-            '.[] | "<li><a href=\"\(.url)\">\(.sha) (run \(.run))</a><span>\(.timestamp)</span></li>"'
-            >> gh-pages/history.html
+          echo "$UPDATED_HISTORY" | jq -r '
+            .[] |
+            "<li><a href=\"\(.url)\">\(.sha)\(if has(\"run\") then \" (run \(.run))\" else \"\" end)</a><span>\(.timestamp)</span></li>"
+          ' >> gh-pages/history.html
 
           cat >> gh-pages/history.html <<'EOF'
             </ul>
@@ -143,6 +147,7 @@ jobs:
           </html>
           EOF
 
+          # redirect index.html to history.html
           echo '<meta http-equiv="refresh" content="0; url=history.html">' \
             > gh-pages/index.html
 
@@ -154,7 +159,6 @@ jobs:
           publish_dir: gh-pages
           force_orphan: false
           keep_files: true
-
 
       - name: Comment PR with report link
         if: github.event_name == 'pull_request'
