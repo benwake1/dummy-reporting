@@ -189,7 +189,7 @@ jobs:
                       "</div>" +
                       "<div>" +
                       (if ($r.failures | length) > 0 and $r.artifact.present then
-                         "<a class=\"artifact-btn\" href=\"" + $r.artifact.url + "\" target=\"_blank\">📦 Artifacts</a>" +
+                         "<a class=\"artifact-btn\" href=\"" + $r.artifact.url + "\" target=\"_blank\">Download</a>" +
                          "<div class=\"artifact-meta\">📦 " + ($r.artifact.size_mb|tostring) + " MB" +
                          (if $r.artifact.expires_at != null then " · ⏳ expires " + ($r.artifact.expires_at | split("T")[0]) else "" end) +
                          "</div>"
