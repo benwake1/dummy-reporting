@@ -227,6 +227,10 @@ li {
   padding: 1rem;
   border-radius: 8px;
   list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: calc(var(--spacing) * 4);
 }
 a {
   color: #38bdf8;
@@ -253,22 +257,43 @@ img {
   margin: 0.25rem;
 }
 details {
+  border-right-style: var(--tw-border-style);
+  border-right-width: 8px;
+  padding: calc(var(--spacing) * 4);
   margin-top: 0.5rem;
+  flex-basis: 100%;
+  background: #040b28;
+  ul {
+    margin-top: calc(var(--spacing) * 2);
+    margin-bottom: calc(var(--spacing) * 0);
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--spacing) * 2);
+    li {
+      margin-bottom: calc(var(--spacing) * 0);
+    }
+  }
 }
 .artifact-btn {
   display: inline-block;
   margin-top: 0.25rem;
   padding: 0.2rem 0.5rem;
-  background: #1e293b;
-  color: #facc15;
+  background: #cff95c;
+  color: #012e41;
   border-radius: 4px;
   font-size: 0.85rem;
   text-decoration: none;
 }
 .artifact-meta {
-  font-size: 0.8rem;
-  opacity: 0.7;
-  margin-top: 0.15rem;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border-width: 0;
 }
 .artifact-none {
   font-size: 0.8rem;
@@ -286,10 +311,16 @@ details {
   syntax: "*";
   inherits: false;
 }
+@property --tw-border-style {
+  syntax: "*";
+  inherits: false;
+  initial-value: solid;
+}
 @layer properties {
   @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))) {
     *, ::before, ::after, ::backdrop {
       --tw-font-weight: initial;
+      --tw-border-style: solid;
     }
   }
 }
