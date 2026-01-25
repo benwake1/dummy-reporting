@@ -218,6 +218,7 @@ body {
   padding: 2rem;
 }
 .wrapper {
+  margin-inline: auto;
   display: flex;
   max-width: var(--container-7xl);
   flex-direction: column;
