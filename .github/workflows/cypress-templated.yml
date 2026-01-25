@@ -178,7 +178,7 @@ jobs:
                     . as $r |
                     $r.status as $s |
                     "<li>" +
-                      "<div>"
+                      "<div>" + 
                       "<a href=\"" + $base_url + $r.url + "\">" + $r.sha + " (run " + $r.run_id + ")</a> " +
                       "<span class=\"pass\">" + ($s.passes|tostring) + " ✅</span> / " +
                       "<span class=\"fail\">" + ($s.failures|tostring) + " ❌</span>" +
@@ -196,7 +196,7 @@ jobs:
                        else
                          "<div class=\"artifact-none\">✅ No failed tests / no artifacts</div>"
                        end) +
-                       </div>
+                       "</div>" +
                       (if ($r.failures|length) > 0 then
                          "<details><summary>❌ Failed tests</summary><ul>" +
                          ($r.failures | map("<li>" + . + "</li>") | join("")) +
