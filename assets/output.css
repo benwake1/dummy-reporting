@@ -14,6 +14,7 @@
     --text-xl: 1.25rem;
     --text-xl--line-height: calc(1.75 / 1.25);
     --font-weight-bold: 700;
+    --radius-lg: 0.5rem;
     --default-font-family: var(--font-sans);
     --default-mono-font-family: var(--font-mono);
   }
@@ -262,8 +263,7 @@ img {
   margin: 0.25rem;
 }
 details {
-  border-right-style: var(--tw-border-style);
-  border-right-width: 8px;
+  border-radius: var(--radius-lg);
   padding: calc(var(--spacing) * 4);
   margin-top: 0.5rem;
   flex-basis: 100%;
@@ -316,16 +316,10 @@ details {
   syntax: "*";
   inherits: false;
 }
-@property --tw-border-style {
-  syntax: "*";
-  inherits: false;
-  initial-value: solid;
-}
 @layer properties {
   @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))) {
     *, ::before, ::after, ::backdrop {
       --tw-font-weight: initial;
-      --tw-border-style: solid;
     }
   }
 }
