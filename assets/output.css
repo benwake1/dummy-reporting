@@ -218,7 +218,10 @@ body {
   padding: 2rem;
 }
 .wrapper {
+  display: flex;
   max-width: var(--container-7xl);
+  flex-direction: column;
+  gap: calc(var(--spacing) * 10);
   padding-inline: calc(var(--spacing) * 4);
 }
 h1 {
