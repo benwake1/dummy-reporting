@@ -1,13 +1,15 @@
 {
-  "name": "cypress-mochawesome-demo",
-  "private": true,
-  "scripts": {
-    "test:ci": "cypress run"
-  },
-  "devDependencies": {
-    "cypress": "^13.6.0",
-    "mochawesome": "^7.1.3",
-    "mochawesome-merge": "^4.3.0",
-    "mochawesome-report-generator": "^6.2.0"
-  }
+    "name": "cypress-mochawesome-demo",
+    "private": true,
+    "scripts": {
+        "test:ci": "cypress run",
+        "build:tailwind": "tailwindcss -i ./src/input.css -o ./dist/tailwind.css --minify"
+    },
+    "devDependencies": {
+        "cypress": "^13.6.0",
+        "mochawesome": "^7.1.3",
+        "mochawesome-merge": "^4.3.0",
+        "mochawesome-report-generator": "^6.2.0",
+        "tailwindcss": "^4.1.18"
+    }
 }

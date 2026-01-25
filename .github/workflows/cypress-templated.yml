@@ -1,221 +1,228 @@
 name: Cypress Demo - Templated Dashboard
 
 on:
-  push:
-    branches: ["main"]
-  pull_request:
-  workflow_dispatch:
+    push:
+        branches: ['main']
+    pull_request:
+    workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
+    contents: write
+    pull-requests: write
 
 jobs:
-  test-and-publish-templated:
-    runs-on: ubuntu-latest
+    test-and-publish-templated:
+        runs-on: ubuntu-latest
 
-    steps:
-      # 1️⃣ Checkout main branch
-      - name: Checkout main
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        steps:
+            # 1️⃣ Checkout main branch
+            - name: Checkout main
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
 
-      # 2️⃣ Setup Node
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-          cache: npm
+            # 2️⃣ Setup Node
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 18
+                  cache: npm
 
-      # 3️⃣ Install dependencies
-      - name: Install deps
-        run: npm ci
+            # 3️⃣ Install dependencies
+            - name: Install deps
+              run: npm ci
 
-      # 4️⃣ Run Cypress tests (do not fail pipeline)
-      - name: Run Cypress
-        run: npm run test:ci
-        continue-on-error: true
+            - name: Build Tailwind CSS
+              run: npx @tailwindcss/cli -i ./src/input.css -o ./src/output.css
 
-      # 5️⃣ Merge Mochawesome JSON
-      - name: Merge Mochawesome
-        run: npx mochawesome-merge mochawesome-report/*.json > mochawesome-report/merged.json
+            # 4️⃣ Run Cypress tests (do not fail pipeline)
+            - name: Run Cypress
+              run: npm run test:ci
+              continue-on-error: true
 
-      # 6️⃣ Generate HTML report
-      - name: Generate HTML report
-        run: npx marge mochawesome-report/merged.json --reportDir mochawesome-report/html --reportFilename index
+            # 5️⃣ Merge Mochawesome JSON
+            - name: Merge Mochawesome
+              run: npx mochawesome-merge mochawesome-report/*.json > mochawesome-report/merged.json
 
-      # 7️⃣ Upload artifacts
-      - name: Upload Cypress Artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: cypress-artifacts-${{ github.run_id }}
-          retention-days: 14
-          if-no-files-found: ignore
-          path: |
-            mochawesome-report/html
-            cypress/screenshots
+            # 6️⃣ Generate HTML report
+            - name: Generate HTML report
+              run: npx marge mochawesome-report/merged.json --reportDir mochawesome-report/html --reportFilename index
 
-      # 8️⃣ Checkout gh-pages branch
-      - name: Checkout gh-pages
-        uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          path: gh-pages
-          fetch-depth: 0
+            # 7️⃣ Upload artifacts
+            - name: Upload Cypress Artifacts
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: cypress-artifacts-${{ github.run_id }}
+                  retention-days: 14
+                  if-no-files-found: ignore
+                  path: |
+                      mochawesome-report/html
+                      cypress/screenshots
 
-      # 9️⃣ Checkout main branch again (template)
-      - name: Checkout main branch for template
-        uses: actions/checkout@v4
-        with:
-          path: main-checkout
-          fetch-depth: 0
+            # 8️⃣ Checkout gh-pages branch
+            - name: Checkout gh-pages
+              uses: actions/checkout@v4
+              with:
+                  ref: gh-pages
+                  path: gh-pages
+                  fetch-depth: 0
 
-      # 🔟 Install jq
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
+            # 9️⃣ Checkout main branch again (template)
+            - name: Checkout main branch for template
+              uses: actions/checkout@v4
+              with:
+                  path: main-checkout
+                  fetch-depth: 0
 
-      # 1️⃣1️⃣ Prepare Templated Pages
-      - name: Prepare Templated Pages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -e
+            # 🔟 Install jq
+            - name: Install jq
+              run: sudo apt-get update && sudo apt-get install -y jq
 
-          OWNER="${GITHUB_REPOSITORY%%/*}"
-          REPO="${GITHUB_REPOSITORY##*/}"
-          BASE_URL="https://${OWNER}.github.io/${REPO}/"
+            # 1️⃣1️⃣ Prepare Templated Pages
+            - name: Prepare Templated Pages
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  set -e
 
-          SHA="${GITHUB_SHA}"
-          RUN_ID="${GITHUB_RUN_ID}"
+                  OWNER="${GITHUB_REPOSITORY%%/*}"
+                  REPO="${GITHUB_REPOSITORY##*/}"
+                  BASE_URL="https://${OWNER}.github.io/${REPO}/"
 
-          REPORT_PATH="reports/$SHA/run-$RUN_ID"
-          PAGE_URL="$REPORT_PATH/"
+                  SHA="${GITHUB_SHA}"
+                  RUN_ID="${GITHUB_RUN_ID}"
 
-          TS="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-          HUMAN_TS="$(date -u +"%b %d, %Y %H:%M UTC")"
+                  REPORT_PATH="reports/$SHA/run-$RUN_ID"
+                  PAGE_URL="$REPORT_PATH/"
 
-          mkdir -p "gh-pages/$REPORT_PATH"
-          cp -r mochawesome-report/html/* "gh-pages/$REPORT_PATH"
+                  TS="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+                  HUMAN_TS="$(date -u +"%b %d, %Y %H:%M UTC")"
 
-          # -------------------------------
-          # Artifact metadata
-          # -------------------------------
-          ARTIFACT_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}#artifacts"
+                  mkdir -p "gh-pages/$REPORT_PATH"
+                  cp -r mochawesome-report/html/* "gh-pages/$REPORT_PATH"
 
-          ARTIFACT_JSON=$(curl -s \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts")
+                  # Build Tailwind for Formatting
+                  mkdir -p gh-pages/assets
+                  cp src/output.css gh-pages/assets/output.css
 
-          ARTIFACT_PRESENT=$(echo "$ARTIFACT_JSON" | jq '(.artifacts | length) > 0')
-          ARTIFACT_SIZE_MB=$(echo "$ARTIFACT_JSON" | jq 'if (.artifacts | length) > 0 then (.artifacts[0].size_in_bytes / 1024 / 1024 | floor) else null end')
-          ARTIFACT_EXPIRES=$(echo "$ARTIFACT_JSON" | jq -r 'if (.artifacts | length) > 0 then .artifacts[0].expires_at else null end')
+                  # -------------------------------
+                  # Artifact metadata
+                  # -------------------------------
+                  ARTIFACT_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}#artifacts"
 
-          # -------------------------------
-          # Test metadata
-          # -------------------------------
-          FAILURES=$(jq '[.results[].suites[].tests[]? | select(.fail) | .title]' mochawesome-report/merged.json)
-          STATUS=$(jq '.stats | { passes, failures, pending, duration }' mochawesome-report/merged.json)
+                  ARTIFACT_JSON=$(curl -s \
+                    -H "Authorization: Bearer $GITHUB_TOKEN" \
+                    -H "Accept: application/vnd.github+json" \
+                    "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts")
 
-          MSG=$(git log -1 --pretty=%s)
-          AUTHOR=$(git log -1 --pretty=%an)
-          BRANCH="${GITHUB_REF#refs/heads/}"
+                  ARTIFACT_PRESENT=$(echo "$ARTIFACT_JSON" | jq '(.artifacts | length) > 0')
+                  ARTIFACT_SIZE_MB=$(echo "$ARTIFACT_JSON" | jq 'if (.artifacts | length) > 0 then (.artifacts[0].size_in_bytes / 1024 / 1024 | floor) else null end')
+                  ARTIFACT_EXPIRES=$(echo "$ARTIFACT_JSON" | jq -r 'if (.artifacts | length) > 0 then .artifacts[0].expires_at else null end')
 
-          HISTORY_FILE="gh-pages/templated_history.json"
-          [ -f "$HISTORY_FILE" ] || echo "[]" > "$HISTORY_FILE"
+                  # -------------------------------
+                  # Test metadata
+                  # -------------------------------
+                  FAILURES=$(jq '[.results[].suites[].tests[]? | select(.fail) | .title]' mochawesome-report/merged.json)
+                  STATUS=$(jq '.stats | { passes, failures, pending, duration }' mochawesome-report/merged.json)
 
-          UPDATED=$(jq \
-            --arg sha "$SHA" \
-            --arg run_id "$RUN_ID" \
-            --arg url "$PAGE_URL" \
-            --arg ts "$TS" \
-            --arg hts "$HUMAN_TS" \
-            --arg branch "$BRANCH" \
-            --arg msg "$MSG" \
-            --arg author "$AUTHOR" \
-            --argjson artifact_present "$ARTIFACT_PRESENT" \
-            --arg artifact_url "$ARTIFACT_URL" \
-            --argjson artifact_size "$ARTIFACT_SIZE_MB" \
-            --arg artifact_expires "$ARTIFACT_EXPIRES" \
-            --argjson status "$STATUS" \
-            --argjson failures "$FAILURES" \
-            '. += [{
-              sha: $sha,
-              run_id: $run_id,
-              url: $url,
-              timestamp: $ts,
-              human_timestamp: $hts,
-              branch: $branch,
-              message: $msg,
-              author: $author,
-              status: $status,
-              failures: $failures,
-              artifact: {
-                present: $artifact_present,
-                url: $artifact_url,
-                size_mb: $artifact_size,
-                expires_at: $artifact_expires
-              }
-            }] | sort_by(.timestamp) | reverse | .[:10]' "$HISTORY_FILE")
+                  MSG=$(git log -1 --pretty=%s)
+                  AUTHOR=$(git log -1 --pretty=%an)
+                  BRANCH="${GITHUB_REF#refs/heads/}"
 
-          echo "$UPDATED" > "$HISTORY_FILE"
+                  HISTORY_FILE="gh-pages/templated_history.json"
+                  [ -f "$HISTORY_FILE" ] || echo "[]" > "$HISTORY_FILE"
 
-          # -------------------------------
-          # Render dashboard items
-          # -------------------------------
-          
-          DASHBOARD_ITEMS=$(jq -r --arg base_url "$BASE_URL" '
-            .[] |
-            . as $r |
-            $r.status as $s |
-            "<li>" +
-              "<a href=\"" + $base_url + $r.url + "\">" + $r.sha + " (run " + $r.run_id + ")</a> " +
-              "<span class=\"pass\">" + ($s.passes|tostring) + " ✅</span> / " +
-              "<span class=\"fail\">" + ($s.failures|tostring) + " ❌</span>" +
-              "<div class=\"meta\">" + $r.message + " — " + $r.author + " · " + $r.branch + " · " +
-                (if $s.duration then ($s.duration / 1000 | floor | tostring) + "s" else "—" end) +
-                " · " + $r.human_timestamp +
-              "</div>" +
-              (if ($r.failures | length) > 0 and $r.artifact.present then
-                 "<a class=\"artifact-btn\" href=\"" + $r.artifact.url + "\" target=\"_blank\">📦 Artifacts</a>" +
-                 "<div class=\"artifact-meta\">📦 " + ($r.artifact.size_mb|tostring) + " MB" +
-                 (if $r.artifact.expires_at != null then " · ⏳ expires " + ($r.artifact.expires_at | split("T")[0]) else "" end) +
-                 "</div>" +
-                 "<details><summary>🖼️ Screenshots</summary>" +
-                   "<a href=\"" + $r.artifact.url + "\" target=\"_blank\">View screenshots in artifact zip</a>" +
-                 "</details>"
-               else
-                 "<div class=\"artifact-none\">✅ No failed tests / no artifacts</div>"
-               end) +
-              (if ($r.failures|length) > 0 then
-                 "<details><summary>❌ Failed tests</summary><ul>" +
-                 ($r.failures | map("<li>" + . + "</li>") | join("")) +
-                 "</ul></details>"
-               else "" end) +
-            "</li>"
-          ' "$HISTORY_FILE")
-          
-          TEMPLATE_FILE="main-checkout/.cypress-dashbord/template.html"
-          OUTPUT_FILE="gh-pages/templated_index.html"
-          
-          # Inject dashboard items at the placeholder comment
-          awk -v items="$DASHBOARD_ITEMS" '
-            BEGIN {injection_done=0}
-            {
-              print
-              if ($0 ~ /<!-- DASHBOARD_ITEMS -->/ && !injection_done) {
-                print items
-                injection_done=1
-              }
-            }
-          ' "$TEMPLATE_FILE" > "$OUTPUT_FILE"
+                  UPDATED=$(jq \
+                    --arg sha "$SHA" \
+                    --arg run_id "$RUN_ID" \
+                    --arg url "$PAGE_URL" \
+                    --arg ts "$TS" \
+                    --arg hts "$HUMAN_TS" \
+                    --arg branch "$BRANCH" \
+                    --arg msg "$MSG" \
+                    --arg author "$AUTHOR" \
+                    --argjson artifact_present "$ARTIFACT_PRESENT" \
+                    --arg artifact_url "$ARTIFACT_URL" \
+                    --argjson artifact_size "$ARTIFACT_SIZE_MB" \
+                    --arg artifact_expires "$ARTIFACT_EXPIRES" \
+                    --argjson status "$STATUS" \
+                    --argjson failures "$FAILURES" \
+                    '. += [{
+                      sha: $sha,
+                      run_id: $run_id,
+                      url: $url,
+                      timestamp: $ts,
+                      human_timestamp: $hts,
+                      branch: $branch,
+                      message: $msg,
+                      author: $author,
+                      status: $status,
+                      failures: $failures,
+                      artifact: {
+                        present: $artifact_present,
+                        url: $artifact_url,
+                        size_mb: $artifact_size,
+                        expires_at: $artifact_expires
+                      }
+                    }] | sort_by(.timestamp) | reverse | .[:10]' "$HISTORY_FILE")
 
-      # 1️⃣2️⃣ Deploy Pages
-      - name: Deploy Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: gh-pages
-          keep_files: true
+                  echo "$UPDATED" > "$HISTORY_FILE"
+
+                  # -------------------------------
+                  # Render dashboard items
+                  # -------------------------------
+
+                  DASHBOARD_ITEMS=$(jq -r --arg base_url "$BASE_URL" '
+                    .[] |
+                    . as $r |
+                    $r.status as $s |
+                    "<li>" +
+                      "<a href=\"" + $base_url + $r.url + "\">" + $r.sha + " (run " + $r.run_id + ")</a> " +
+                      "<span class=\"pass\">" + ($s.passes|tostring) + " ✅</span> / " +
+                      "<span class=\"fail\">" + ($s.failures|tostring) + " ❌</span>" +
+                      "<div class=\"meta\">" + $r.message + " — " + $r.author + " · " + $r.branch + " · " +
+                        (if $s.duration then ($s.duration / 1000 | floor | tostring) + "s" else "—" end) +
+                        " · " + $r.human_timestamp +
+                      "</div>" +
+                      (if ($r.failures | length) > 0 and $r.artifact.present then
+                         "<a class=\"artifact-btn\" href=\"" + $r.artifact.url + "\" target=\"_blank\">📦 Artifacts</a>" +
+                         "<div class=\"artifact-meta\">📦 " + ($r.artifact.size_mb|tostring) + " MB" +
+                         (if $r.artifact.expires_at != null then " · ⏳ expires " + ($r.artifact.expires_at | split("T")[0]) else "" end) +
+                         "</div>" +
+                         "<details><summary>🖼️ Screenshots</summary>" +
+                           "<a href=\"" + $r.artifact.url + "\" target=\"_blank\">View screenshots in artifact zip</a>" +
+                         "</details>"
+                       else
+                         "<div class=\"artifact-none\">✅ No failed tests / no artifacts</div>"
+                       end) +
+                      (if ($r.failures|length) > 0 then
+                         "<details><summary>❌ Failed tests</summary><ul>" +
+                         ($r.failures | map("<li>" + . + "</li>") | join("")) +
+                         "</ul></details>"
+                       else "" end) +
+                    "</li>"
+                  ' "$HISTORY_FILE")
+
+                  TEMPLATE_FILE="main-checkout/.cypress-dashbord/template.html"
+                  OUTPUT_FILE="gh-pages/templated_index.html"
+
+                  # Inject dashboard items at the placeholder comment
+                  awk -v items="$DASHBOARD_ITEMS" '
+                    BEGIN {injection_done=0}
+                    {
+                      print
+                      if ($0 ~ /<!-- DASHBOARD_ITEMS -->/ && !injection_done) {
+                        print items
+                        injection_done=1
+                      }
+                    }
+                  ' "$TEMPLATE_FILE" > "$OUTPUT_FILE"
+
+            # 1️⃣2️⃣ Deploy Pages
+            - name: Deploy Pages
+              uses: peaceiris/actions-gh-pages@v4
+              with:
+                  github_token: ${{ secrets.GITHUB_TOKEN }}
+                  publish_dir: gh-pages
+                  keep_files: true

@@ -1,102 +1,169 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-<meta charset="UTF-8">
-<title>Cypress CI Dashboard - Templated</title>
-<style>
-  body { font-family: system-ui; background:#0f172a; color:#e5e7eb; padding:2rem; }
-  h1 { margin-bottom:1.5rem; }
-  h2 { margin-top:2rem; }
-  li { background:#020617; margin-bottom:1rem; padding:1rem; border-radius:8px; list-style:none; }
-  a { color:#38bdf8; font-weight:600; text-decoration:none; }
-  .meta { font-size:.85rem; opacity:.7; margin-top:.25rem; display:block; }
-  .pass { color:#22c55e; font-weight:bold; }
-  .fail { color:#ef4444; font-weight:bold; }
-  img { max-width:160px; border-radius:6px; margin:.25rem; }
-  details { margin-top:.5rem; }
-  .artifact-btn { display:inline-block; margin-top:.25rem; padding:.2rem .5rem; background:#1e293b; color:#facc15; border-radius:4px; font-size:.85rem; text-decoration:none; }
-  .artifact-meta { font-size:.8rem; opacity:.7; margin-top:.15rem; }
-  .artifact-none { font-size:.8rem; opacity:.7; margin-top:.15rem; }
-</style>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body>
-<h1>🧪 Cypress CI Dashboard</h1>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Cypress CI Dashboard - Templated</title>
+        <style>
+            body {
+                font-family: system-ui;
+                background: #0f172a;
+                color: #e5e7eb;
+                padding: 2rem;
+            }
+            h1 {
+                margin-bottom: 1.5rem;
+            }
+            h2 {
+                margin-top: 2rem;
+            }
+            li {
+                background: #020617;
+                margin-bottom: 1rem;
+                padding: 1rem;
+                border-radius: 8px;
+                list-style: none;
+            }
+            a {
+                color: #38bdf8;
+                font-weight: 600;
+                text-decoration: none;
+            }
+            .meta {
+                font-size: 0.85rem;
+                opacity: 0.7;
+                margin-top: 0.25rem;
+                display: block;
+            }
+            .pass {
+                color: #22c55e;
+                font-weight: bold;
+            }
+            .fail {
+                color: #ef4444;
+                font-weight: bold;
+            }
+            img {
+                max-width: 160px;
+                border-radius: 6px;
+                margin: 0.25rem;
+            }
+            details {
+                margin-top: 0.5rem;
+            }
+            .artifact-btn {
+                display: inline-block;
+                margin-top: 0.25rem;
+                padding: 0.2rem 0.5rem;
+                background: #1e293b;
+                color: #facc15;
+                border-radius: 4px;
+                font-size: 0.85rem;
+                text-decoration: none;
+            }
+            .artifact-meta {
+                font-size: 0.8rem;
+                opacity: 0.7;
+                margin-top: 0.15rem;
+            }
+            .artifact-none {
+                font-size: 0.8rem;
+                opacity: 0.7;
+                margin-top: 0.15rem;
+            }
+        </style>
+        <link rel="stylesheet" href="assets/output.css" />
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    </head>
+    <body>
+        <h1>🧪 Cypress CI Dashboard</h1>
 
-<h2>📊 Test Trends</h2>
-<canvas id="trendChart" width="800" height="250"></canvas>
+        <h2>📊 Test Trends</h2>
+        <canvas id="trendChart" width="800" height="250"></canvas>
 
-<ul>
-<!-- DASHBOARD_ITEMS -->
-</ul>
+        <ul>
+            <!-- DASHBOARD_ITEMS -->
+        </ul>
 
-<script>
-// Fetch JSON history
-fetch('templated_history.json')
-  .then(res => res.json())
-  .then(data => {
-    data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        <script>
+            // Fetch JSON history
+            fetch('templated_history.json')
+                .then((res) => res.json())
+                .then((data) => {
+                    data.sort(
+                        (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
+                    );
 
-    const labels = data.map(r => r.human_timestamp);
-    const passes = data.map(r => r.status.passes);
-    const failures = data.map(r => r.status.failures);
-    const durations = data.map(r => r.status.duration ? (r.status.duration/1000).toFixed(1) : 0);
+                    const labels = data.map((r) => r.human_timestamp);
+                    const passes = data.map((r) => r.status.passes);
+                    const failures = data.map((r) => r.status.failures);
+                    const durations = data.map((r) =>
+                        r.status.duration
+                            ? (r.status.duration / 1000).toFixed(1)
+                            : 0,
+                    );
 
-    const ctx = document.getElementById('trendChart').getContext('2d');
-    new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: 'Passes',
-            data: passes,
-            backgroundColor: 'rgba(34,197,94,0.7)'
-          },
-          {
-            label: 'Failures',
-            data: failures,
-            backgroundColor: 'rgba(239,68,68,0.7)'
-          },
-          {
-            label: 'Duration (s)',
-            data: durations,
-            type: 'line',
-            borderColor: 'gold',
-            backgroundColor: 'rgba(250,204,21,0.3)',
-            yAxisID: 'y1',
-            tension: 0.2,
-            fill: false,
-            pointRadius: 4
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { position: 'top' },
-          tooltip: { mode: 'index', intersect: false }
-        },
-        scales: {
-          y: {
-            stacked: true,
-            beginAtZero: true,
-            title: { display: true, text: 'Tests Count' }
-          },
-          y1: {
-            stacked: false,
-            beginAtZero: true,
-            position: 'right',
-            title: { display: true, text: 'Duration (s)' },
-            grid: { drawOnChartArea: false }
-          },
-          x: { stacked: true }
-        }
-      }
-    });
-  });
-</script>
-
-</body>
+                    const ctx = document
+                        .getElementById('trendChart')
+                        .getContext('2d');
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels,
+                            datasets: [
+                                {
+                                    label: 'Passes',
+                                    data: passes,
+                                    backgroundColor: 'rgba(34,197,94,0.7)',
+                                },
+                                {
+                                    label: 'Failures',
+                                    data: failures,
+                                    backgroundColor: 'rgba(239,68,68,0.7)',
+                                },
+                                {
+                                    label: 'Duration (s)',
+                                    data: durations,
+                                    type: 'line',
+                                    borderColor: 'gold',
+                                    backgroundColor: 'rgba(250,204,21,0.3)',
+                                    yAxisID: 'y1',
+                                    tension: 0.2,
+                                    fill: false,
+                                    pointRadius: 4,
+                                },
+                            ],
+                        },
+                        options: {
+                            responsive: true,
+                            interaction: { mode: 'index', intersect: false },
+                            plugins: {
+                                legend: { position: 'top' },
+                                tooltip: { mode: 'index', intersect: false },
+                            },
+                            scales: {
+                                y: {
+                                    stacked: true,
+                                    beginAtZero: true,
+                                    title: {
+                                        display: true,
+                                        text: 'Tests Count',
+                                    },
+                                },
+                                y1: {
+                                    stacked: false,
+                                    beginAtZero: true,
+                                    position: 'right',
+                                    title: {
+                                        display: true,
+                                        text: 'Duration (s)',
+                                    },
+                                    grid: { drawOnChartArea: false },
+                                },
+                                x: { stacked: true },
+                            },
+                        },
+                    });
+                });
+        </script>
+    </body>
 </html>
