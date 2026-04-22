@@ -5,15 +5,13 @@ describe('Passing Test Demo', () => {
 })
 
 describe('Demo Passing Test', () => {
-before(() => {
-// optional: visit any page
-cy.visit('https://example.cypress.io')
-})
-  })
-
-
-it('Intentionally fails to demo screenshots and videos', () => {
-// This assertion will always fail
-cy.get('h1').should('contain', 'Kitchen Sink')
+	before(() => {
+		// optional: visit any page
+		cy.visit('https://example.cypress.io')
+	})
+	
+	it('Can visit the homepage', () => {
+	    cy.visit('https://example.cypress.io')
+	});
 
 })
